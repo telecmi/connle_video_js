@@ -20,7 +20,7 @@ yarn add connlevideo
 In your JavaScript/TypeScript file:
 
 ```js
-import ConnleVideo from 'connle_video_js';
+import ConnleVideo from 'connle-video-sdk';
 
 const serverUrl = 'https://your-server.com';
 const token = 'YOUR_JWT_TOKEN';
@@ -199,7 +199,7 @@ connleai.on('eventName', (data) => {
 ## Minimal Example
 
 ```js
-import ConnleVideo from 'connle_video_js';
+import ConnleVideo from 'connle-video-sdk';
 
 function initCall() {
   const connleai = new ConnleVideo(
