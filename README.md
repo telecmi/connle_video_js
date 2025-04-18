@@ -5,12 +5,12 @@
 Install **ConnleVideo** via NPM:
 
 ```bash
-npm install connlevideo
+npm install connle-video-sdk
 ```
 
 *Or use your preferred package manager, such as:*  
 ```bash
-yarn add connlevideo
+yarn add connle-video-sdk
 ```
 
 ---

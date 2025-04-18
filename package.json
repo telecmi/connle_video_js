@@ -1,6 +1,6 @@
 {
   "name": "connle-video-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Connle voice and video  SDK",
   "main": "lib/index.js",
   "directories": {
