@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Connle AI SDK Test</title>
+  <script  src="connleVideo.min.js"></script>
+  <style>
+    video {
+      border: 1px solid #ccc;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Connle AI Streaming SDK Test Page</h1>
+
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video>
+
+  <div>
+    <button id="audioOnlyBtn">Toggle Audio</button>
+    <button id="videoBtn">Toggle Video</button>
+    <button id="shareScreenBtn">Share Screen</button>
+    <button id="hangupBtn">Hangup</button>
+  </div>
+
+  <script>
+    const remoteVideo = document.getElementById('remoteVideo');
+    const localVideo = document.getElementById('localVideo');
+
+    const connleai = new ConnleVideo(
+      'http://localhost:2029',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjEwOF8yMjI0MjU3IiwiaW5ldF9ubyI6MjIyNDI1NywiZW1haWxfaWQiOiJiYWxhQHRlc3QuY29tIiwidXNlcl9pZCI6Ijk0NThkODQyLWY3ZjctNDdlMS1iNTJiLTM5M2NmYjRmMjg5MyIsIm9yZ19pZCI6IjBkOTY5NDUwLTU0MDMtMTFlYy1hM2UxLWQ3ZDJiZTA5NWZlMSIsImlhdCI6MTc0NDg5ODAyMSwiZXhwIjoxNzQ1MDcwODIxfQ.2KUPUz4KsDD_',
+      'ws://localhost:7880'
+    );
+
+    connleai.connect();
+
+    // Button handlers
+    document.getElementById('audioOnlyBtn').addEventListener('click', () => connleai.toggleAudio());
+    document.getElementById('videoBtn').addEventListener('click', () => connleai.toggleVideo());
+    document.getElementById('shareScreenBtn').addEventListener('click', () => connleai.toggleScreenShare());
+    document.getElementById('hangupBtn').addEventListener('click', () => connleai.hangup());
+
+    // Core event hooks
+    connleai.onConnect(data => console.log('Connected:', data));
+    connleai.onDisconnect(data => console.log('Disconnected:', data));
+    connleai.onMessage(data => console.log('Message:', data));
+    connleai.onStatus(data => console.log('Status:', data));
+    connleai.onAnswered(data => console.log('Answered:', data));
+    connleai.onEnded(data => console.log('Ended:', data));
+    connleai.onError(error => console.error('Error:', error));
+
+    // Confirm prompt on incoming call
+    connleai.onIncomingCall(data => {
+      const accept = confirm('Accept call from ' + (data.from || 'unknown caller') + '?');
+      if (accept) {
+        connleai.answer(data.callId);
+      } else {
+        connleai.reject(data.callId);
+      }
+      console.log('Incoming call:', data);
+    });
+
+    // Extended events
+    connleai.on('connected', data => console.log('connected', data));
+    connleai.on('disconnected', data => console.log('disconnected', data));
+    connleai.on('reconnecting', data => console.log('reconnecting', data));
+    connleai.on('reconnected', data => console.log('reconnected', data));
+    connleai.on('userConnected', data => console.log('userConnected', data));
+    connleai.on('userDisconnected', data => console.log('userDisconnected', data));
+    connleai.on('mediaStarted', data => console.log('mediaStarted', data));
+    connleai.on('mediaStopped', data => console.log('mediaStopped', data));
+    connleai.on('streamAdded', data => {
+      remoteVideo.srcObject = new MediaStream([data.stream]);
+      console.log('streamAdded', data);
+    });
+    connleai.on('streamRemoved', data => {
+      remoteVideo.srcObject = null;
+      console.log('streamRemoved', data);
+    });
+    connleai.on('localStreamAdded', data => {
+      localVideo.srcObject = new MediaStream([data.media]);
+      console.log('localStreamAdded', data);
+    });
+    connleai.on('localStreamRemoved', data => {
+      localVideo.srcObject = null;
+      console.log('localStreamRemoved', data);
+    });
+    connleai.on('muted', data => console.log('muted', data));
+    connleai.on('unmuted', data => console.log('unmuted', data));
+    connleai.on('paused', data => console.log('paused', data));
+    connleai.on('play', data => console.log('play', data));
+    connleai.on('speaking', data => console.log('speaking', data));
+    connleai.on('dataReceived', data => console.log('dataReceived', data));
+
+    window.connleai = connleai;
+  </script>
+</body>
+</html>
