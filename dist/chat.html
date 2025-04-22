@@ -1,36 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Connle AI SDK Test</title>
-  <script  src="connleVideo.min.js"></script>
-  <style>
-    video {
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><title>Connle AI SDK Test</title><script src="connleVideo.min.js"></script><style>video {
       border: 1px solid #ccc;
       margin: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Connle AI Streaming SDK Test Page</h1>
-
-  <video id="remoteVideo" autoplay playsinline></video>
-  <video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video>
-
-  <div>
-    <button id="audioOnlyBtn">Toggle Audio</button>
-    <button id="videoBtn">Toggle Video</button>
-    <button id="shareScreenBtn">Share Screen</button>
-    <button id="hangupBtn">Hangup</button>
-  </div>
-
-  <script>
-    const remoteVideo = document.getElementById('remoteVideo');
+    }</style><script defer="defer" src="connleVideo.min.js"></script><script defer="defer" src="connleVideo.min.js"></script></head><body><h1>Connle AI Streaming SDK Test Page</h1><video id="remoteVideo" autoplay playsinline></video><video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video><div><button id="audioOnlyBtn">Toggle Audio</button> <button id="videoBtn">Toggle Video</button> <button id="shareScreenBtn">Share Screen</button> <button id="hangupBtn">Hangup</button></div><script>const remoteVideo = document.getElementById('remoteVideo');
     const localVideo = document.getElementById('localVideo');
-
+    const serverUrl = 'wss://sfu.connle.com';
+    const mediaUrl = 'wss://signalling.connle.com';
     const connleai = new ConnleVideo(
       'http://localhost:2029',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjEwOF8yMjI0MjU3IiwiaW5ldF9ubyI6MjIyNDI1NywiZW1haWxfaWQiOiJiYWxhQHRlc3QuY29tIiwidXNlcl9pZCI6Ijk0NThkODQyLWY3ZjctNDdlMS1iNTJiLTM5M2NmYjRmMjg5MyIsIm9yZ19pZCI6IjBkOTY5NDUwLTU0MDMtMTFlYy1hM2UxLWQ3ZDJiZTA5NWZlMSIsImlhdCI6MTc0NDg5ODAyMSwiZXhwIjoxNzQ1MDcwODIxfQ.2KUPUz4KsDD_',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjEwOF8yMjI0MjU3IiwiaW5ldF9ubyI6MjIyNDI1NywiZW1haWxfaWQiOiJiYWxhQHRlc3QuY29tIiwidXNlcl9pZCI6Ijk0NThkODQyLWY3ZjctNDdlMS1iNTJiLTM5M2NmYjRmMjg5MyIsIm9yZ19pZCI6IjBkOTY5NDUwLTU0MDMtMTFlYy1hM2UxLWQ3ZDJiZTA5NWZlMSIsImlhdCI6MTc0NTIyNzUzNSwiZXhwIjoxNzQ1NDAwMzM1fQ.',
       'ws://localhost:7880'
     );
 
@@ -87,6 +64,8 @@
       localVideo.srcObject = null;
       console.log('localStreamRemoved', data);
     });
+
+    connleai.on('error', data => console.log( data));
     connleai.on('muted', data => console.log('muted', data));
     connleai.on('unmuted', data => console.log('unmuted', data));
     connleai.on('paused', data => console.log('paused', data));
@@ -94,7 +73,4 @@
     connleai.on('speaking', data => console.log('speaking', data));
     connleai.on('dataReceived', data => console.log('dataReceived', data));
 
-    window.connleai = connleai;
-  </script>
-</body>
-</html>
+    window.connleai = connleai;</script></body></html>

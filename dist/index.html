@@ -1,36 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Connle AI SDK Test</title>
-  <script  src="connleVideo.min.js"></script>
-  <style>
-    video {
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><title>Connle AI SDK Test</title><script src="connleVideo.min.js"></script><style>video {
       border: 1px solid #ccc;
       margin: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Connle AI Streaming SDK Test Page</h1>
-
-  <video id="remoteVideo" autoplay playsinline></video>
-  <video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video>
-
-  <div>
-    <button id="audioOnlyBtn">Toggle Audio</button>
-    <button id="videoBtn">Toggle Video</button>
-    <button id="shareScreenBtn">Share Screen</button>
-    <button id="hangupBtn">Hangup</button>
-  </div>
-
-  <script>
-    const remoteVideo = document.getElementById('remoteVideo');
+    }</style><script defer="defer" src="connleVideo.min.js"></script></head><body><h1>Connle AI Streaming SDK Test Page</h1><video id="remoteVideo" autoplay playsinline></video><video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video><div><button id="audioOnlyBtn">Toggle Audio</button> <button id="videoBtn">Toggle Video</button> <button id="shareScreenBtn">Share Screen</button> <button id="hangupBtn">Hangup</button></div><script type="module">const remoteVideo = document.getElementById('remoteVideo');
     const localVideo = document.getElementById('localVideo');
+    const serverUrl = 'wss://signalling.connle.com';
+    const mediaUrl = 'wss://sfu.connle.com';
 
     const connleai = new ConnleVideo(
       'http://localhost:2029',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjUwMTlfMjIyNDI1NyIsImluZXRfbm8iOjIyMjQyNTcsImVtYWlsX2lkIjoidmVsbXVydWdhbkB0ZWxlY21pLmNvbSIsInVzZXJfaWQiOiIxOWJjNDdlYy1mYjc1LTQwMTUtYjFjMy1mOGY5ZjEwNjA5YTkiLCJvcmdfaWQiOiIwZDk2OTQ1MC01NDAzLTExZWMtYTNlMS1kN2QyYmUwOTVmZTEiLCJpYXQiOjE3NDQ4OTg4OTcsImV4cCI6MTc0NTA3MTY5N30.Yr_',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjUwMTlfMjIyNDI1NyIsImluZXRfbm8iOjIyMjQyNTcsImVtYWlsX2lkIjoidmVsbXVydWdhbkB0ZWxlY21pLmNvbSIsInVzZXJfaWQiOiIxOWJjNDdlYy1mYjc1LTQwMTUtYjFjMy1mOGY5ZjEwNjA5YTkiLCJvcmdfaWQiOiIwZDk2OTQ1MC01NDAzLTExZWMtYTNlMS1kN2QyYmUwOTVmZTEiLCJpYXQiOjE3NDUyMTUzNzUsImV4cCI6MTc0NTM4ODE3NX0.',
       'ws://localhost:7880'
     );
 
@@ -71,6 +49,7 @@
     connleai.on('userDisconnected', data => console.log('userDisconnected', data));
     connleai.on('mediaStarted', data => console.log('mediaStarted', data));
     connleai.on('mediaStopped', data => console.log('mediaStopped', data));
+    connleai.on('error', data => console.log( data));
     connleai.on('streamAdded', data => {
       remoteVideo.srcObject = new MediaStream([data.stream]);
       console.log('streamAdded', data);
@@ -94,7 +73,4 @@
     connleai.on('speaking', data => console.log('speaking', data));
     connleai.on('dataReceived', data => console.log('dataReceived', data));
 
-    window.connleai = connleai;
-  </script>
-</body>
-</html>
+    window.connleai = connleai;</script></body></html>

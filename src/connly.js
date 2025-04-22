@@ -2,12 +2,12 @@ import io from 'socket.io-client';
 import { EventEmitter } from 'events';
 import Video from './video';
 
-export default class ConnlySDK extends EventEmitter {
+export default class ConnlySignalling extends EventEmitter {
     constructor( serverUrl, token, mediaURL ) {
         super();
         this.serverUrl = serverUrl;
         this.token = token;
-        this.mediaURL = mediaURL || 'https://sfu.connle.com';
+        this.mediaURL = mediaURL;
         this.isConnected = false;
         this.eventHandlers = {};
         this.eventHandlers = {};
