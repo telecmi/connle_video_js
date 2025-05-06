@@ -1,14 +1,14 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"/><title>Connle AI SDK Test</title><script src="connleVideo.min.js"></script><style>video {
       border: 1px solid #ccc;
       margin: 10px;
-    }</style><script defer="defer" src="connleVideo.min.js"></script></head><body><h1>Connle AI Streaming SDK Test Page</h1><video id="remoteVideo" autoplay playsinline></video><video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video><div><button id="audioOnlyBtn">Toggle Audio</button> <button id="videoBtn">Toggle Video</button> <button id="shareScreenBtn">Share Screen</button> <button id="hangupBtn">Hangup</button></div><script type="module">const remoteVideo = document.getElementById('remoteVideo');
+    }</style><script defer="defer" src="connleVideo.min.js"></script><script defer="defer" src="connleVideo.min.js"></script></head><body><h1>Connle AI Streaming SDK Test Page</h1><video id="remoteVideo" autoplay playsinline></video><video id="localVideo" autoplay playsinline muted style="width: 100px; height: 100px;"></video><div><button id="audioOnlyBtn">Toggle Audio</button> <button id="videoBtn">Toggle Video</button> <button id="shareScreenBtn">Share Screen</button> <button id="hangupBtn">Hangup</button></div><script type="module">const remoteVideo = document.getElementById('remoteVideo');
     const localVideo = document.getElementById('localVideo');
     const serverUrl = 'wss://signalling.connle.com';
     const mediaUrl = 'wss://sfu.connle.com';
 
     const connleai = new ConnleVideo(
       'http://localhost:2029',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjUwMTlfMjIyNDI1NyIsImluZXRfbm8iOjIyMjQyNTcsImVtYWlsX2lkIjoidmVsbXVydWdhbkB0ZWxlY21pLmNvbSIsInVzZXJfaWQiOiIxOWJjNDdlYy1mYjc1LTQwMTUtYjFjMy1mOGY5ZjEwNjA5YTkiLCJvcmdfaWQiOiIwZDk2OTQ1MC01NDAzLTExZWMtYTNlMS1kN2QyYmUwOTVmZTEiLCJpYXQiOjE3NDUyMTUzNzUsImV4cCI6MTc0NTM4ODE3NX0.',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjUwMTlfMjIyNDI1NyIsImluZXRfbm8iOjIyMjQyNTcsImVtYWlsX2lkIjoidmVsbXVydWdhbkB0ZWxlY21pLmNvbSIsInVzZXJfaWQiOiIxOWJjNDdlYy1mYjc1LTQwMTUtYjFjMy1mOGY5ZjEwNjA5YTkiLCJvcmdfaWQiOiIwZDk2OTQ1MC01NDAzLTExZWMtYTNlMS1kN2QyYmUwOTVmZTEiLCJpYXQiOjE3NDYyNjE1NDksImV4cCI6MTc0NjQzNDM0OX0.KJroWT0vcc8F-UptIoszFipckhQW2aI1bX',
       'ws://localhost:7880'
     );
 
@@ -59,7 +59,7 @@
       console.log('streamRemoved', data);
     });
     connleai.on('localStreamAdded', data => {
-      localVideo.srcObject = new MediaStream([data.media]);
+      localVideo.srcObject = new MediaStream([data.stream]);
       console.log('localStreamAdded', data);
     });
     connleai.on('localStreamRemoved', data => {
@@ -70,7 +70,7 @@
     connleai.on('unmuted', data => console.log('unmuted', data));
     connleai.on('paused', data => console.log('paused', data));
     connleai.on('play', data => console.log('play', data));
-    connleai.on('speaking', data => console.log('speaking', data));
+    //connleai.on('speaking', data => console.log('speaking', data));
     connleai.on('dataReceived', data => console.log('dataReceived', data));
 
     window.connleai = connleai;</script></body></html>

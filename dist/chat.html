@@ -7,7 +7,7 @@
     const mediaUrl = 'wss://signalling.connle.com';
     const connleai = new ConnleVideo(
       'http://localhost:2029',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjEwOF8yMjI0MjU3IiwiaW5ldF9ubyI6MjIyNDI1NywiZW1haWxfaWQiOiJiYWxhQHRlc3QuY29tIiwidXNlcl9pZCI6Ijk0NThkODQyLWY3ZjctNDdlMS1iNTJiLTM5M2NmYjRmMjg5MyIsIm9yZ19pZCI6IjBkOTY5NDUwLTU0MDMtMTFlYy1hM2UxLWQ3ZDJiZTA5NWZlMSIsImlhdCI6MTc0NTIyNzUzNSwiZXhwIjoxNzQ1NDAwMzM1fQ.',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6IjEwOF8yMjI0MjU3IiwiaW5ldF9ubyI6MjIyNDI1NywiZW1haWxfaWQiOiJiYWxhQHRlc3QuY29tIiwidXNlcl9pZCI6Ijk0NThkODQyLWY3ZjctNDdlMS1iNTJiLTM5M2NmYjRmMjg5MyIsIm9yZ19pZCI6IjBkOTY5NDUwLTU0MDMtMTFlYy1hM2UxLWQ3ZDJiZTA5NWZlMSIsImlhdCI6MTc0NjI3NDYyNywiZXhwIjoxNzQ2NDQ3NDI3fQ.s-ebGJk7m5e15ygJSOJ_luaBF2z4UJikGKf50',
       'ws://localhost:7880'
     );
 
@@ -57,7 +57,7 @@
       console.log('streamRemoved', data);
     });
     connleai.on('localStreamAdded', data => {
-      localVideo.srcObject = new MediaStream([data.media]);
+      localVideo.srcObject = new MediaStream([data.stream]);
       console.log('localStreamAdded', data);
     });
     connleai.on('localStreamRemoved', data => {
@@ -70,7 +70,7 @@
     connleai.on('unmuted', data => console.log('unmuted', data));
     connleai.on('paused', data => console.log('paused', data));
     connleai.on('play', data => console.log('play', data));
-    connleai.on('speaking', data => console.log('speaking', data));
+   // connleai.on('speaking', data => console.log('speaking', data));
     connleai.on('dataReceived', data => console.log('dataReceived', data));
 
     window.connleai = connleai;</script></body></html>

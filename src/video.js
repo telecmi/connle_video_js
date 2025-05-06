@@ -54,6 +54,13 @@ export default class Video {
         this.room.removeAllListeners( 'localTrackUnpublished' );
         this.room.removeAllListeners( 'localTrackSubscribed' );
         this.room.removeAllListeners( 'localTrackUnsubscribed' );
+        this.room.removeAllListeners( 'trackMuted' );
+        this.room.removeAllListeners( 'trackUnmuted' );
+
+        if ( this.localParticipant ) {
+            this.localParticipant.removeAllListeners( 'trackMuted' );
+            this.localParticipant.removeAllListeners( 'trackUnmuted' );
+        }
 
 
 
@@ -88,29 +95,59 @@ export default class Video {
 
             _this.emit( 'userConnected', { connected: true, user_id: participant.identity } );
 
-            participant.on( 'trackMuted', ( publication ) => {
-
-                // Handle mute (e.g., show a mute icon)
-
-                if ( publication.kind === 'video' ) {
-                    _this.emit( 'paused', { user_id: participant.identity, media: 'video' } );
-                } else if ( publication.kind === 'audio' ) {
-                    _this.emit( 'muted', { user_id: participant.identity, media: 'audio' } );
-                }
-
-            } );
-
-            participant.on( 'trackUnmuted', ( publication ) => {
-
-                if ( publication.kind === 'video' ) {
-                    _this.emit( 'play', { user_id: participant.identity, media: 'video' } );
-                } else if ( publication.kind === 'audio' ) {
-                    _this.emit( 'unmuted', { user_id: participant.identity, media: 'audio' } );
-                }
-
-            } );
+        } );
 
 
+        this.room.on( 'trackMuted', ( publication, participant ) => {
+
+            // Handle mute (e.g., show a mute icon)
+
+            if ( participant.isLocal ) {
+                return;
+            }
+
+
+            let mediaType;
+            if ( publication.source === 'microphone' ) {
+                mediaType = 'audio';
+            } else if ( publication.source === 'camera' ) {
+                mediaType = 'video';
+            } else if ( publication.source === 'screen' || publication.source === 'screen_share' ) {
+                mediaType = 'screen';
+            } else {
+                mediaType = publication.kind; // Default to the kind if source is not recognized
+            }
+
+
+            if ( publication.kind === 'video' ) {
+                _this.emit( 'paused', { user_id: participant.identity, media: mediaType } );
+            } else if ( publication.kind === 'audio' ) {
+                _this.emit( 'muted', { user_id: participant.identity, media: 'audio' } );
+            }
+
+        } );
+
+        this.room.on( 'trackUnmuted', ( publication, participant ) => {
+
+            if ( participant.isLocal ) {
+                return;
+            }
+            let mediaType;
+            if ( publication.source === 'microphone' ) {
+                mediaType = 'audio';
+            } else if ( publication.source === 'camera' ) {
+                mediaType = 'video';
+            } else if ( publication.source === 'screen' || publication.source === 'screen_share' ) {
+                mediaType = 'screen';
+            } else {
+                mediaType = publication.kind; // Default to the kind if source is not recognized
+            }
+
+            if ( publication.kind === 'video' ) {
+                _this.emit( 'play', { user_id: participant.identity, media: mediaType } );
+            } else if ( publication.kind === 'audio' ) {
+                _this.emit( 'unmuted', { user_id: participant.identity, media: 'audio' } );
+            }
 
         } );
 
@@ -120,7 +157,7 @@ export default class Video {
 
         // Track events
         this.room.on( 'trackPublished', ( publication, participant ) => {
-            console.log( 'trackPublished', publication );
+
             let mediaType;
             if ( publication.source === 'microphone' ) {
                 mediaType = 'audio';
@@ -151,7 +188,6 @@ export default class Video {
 
 
         this.room.on( 'trackSubscribed', ( track, publication, participant ) => {
-            console.log( 'trackSubscribed', publication );
 
             let mediaType;
             if ( publication.source === 'microphone' ) {
@@ -167,7 +203,6 @@ export default class Video {
         } );
 
         this.room.on( 'trackUnsubscribed', ( publication, participant ) => {
-            console.log( 'trackunsubscribed', publication );
 
             let mediaType;
             if ( publication.source === 'microphone' ) {
@@ -196,7 +231,7 @@ export default class Video {
             } else {
                 mediaType = publication.kind; // Default to the kind if source is not recognized
             }
-            _this.emit( 'localStreamAdded', { type: publication.kind, track: publication.track, media: publication.track.mediaStreamTrack, user_id: this.room.localParticipant.identity, source: mediaType } );
+            _this.emit( 'localStreamAdded', { type: publication.kind, track: publication.track, stream: publication.track.mediaStreamTrack, user_id: this.room.localParticipant.identity, source: mediaType } );
         } );
 
         this.room.on( 'localTrackUnpublished', ( publication ) => {
@@ -215,6 +250,7 @@ export default class Video {
 
             _this.emit( 'localStreamRemoved', { type: publication.kind, track: publication.track, user_id: this.room.localParticipant.identity, source: mediaType } );
         } );
+
 
 
 
@@ -256,12 +292,32 @@ export default class Video {
 
         await this.room.connect( this.serverUrl, token );
 
+        const localParticipant = this.room.localParticipant;
+
+
+
+
+        localParticipant.on( 'trackUnmuted', ( publication ) => {
+            let mediaType;
+            if ( publication.source === 'microphone' ) {
+                mediaType = 'audio';
+            } else if ( publication.source === 'camera' ) {
+                mediaType = 'video';
+            } else if ( publication.source === 'screen' || publication.source === 'screen_share' ) {
+                mediaType = 'screen';
+            } else {
+                mediaType = publication.kind; // Default to the kind if source is not recognized
+            }
+            _this.emit( 'localStreamAdded', { type: publication.kind, track: publication.track, stream: publication.track.mediaStreamTrack, user_id: this.room.localParticipant.identity, source: mediaType } );
+        } );
+
+
+
+
+
         this.localParticipant = this.room.localParticipant;
 
 
-
-
-        console.log( this.localParticipant );
         if ( audio ) {
             await this.localParticipant.setMicrophoneEnabled( true );
         }
@@ -279,7 +335,7 @@ export default class Video {
             return false;
         }
 
-        console.log( this.room.state );
+
 
         if ( this.room.state == 'connected' ) {
             return true;

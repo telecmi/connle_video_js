@@ -176,7 +176,7 @@ export default class ConnlySignalling extends EventEmitter {
 
 
     call ( userId, callType, callback ) {
-        console.log( this.isConnected )
+
         if ( !this.isConnected ) return;
 
         // Validate userId
@@ -199,7 +199,7 @@ export default class ConnlySignalling extends EventEmitter {
 
         const callData = { userid: userId, media: callType };
         const _this = this;
-        console.log( 'its send' )
+
         this.socket.emit( 'connle_call_user', callData, ( ack ) => {
 
 
