@@ -86,6 +86,7 @@ export default class ConnlySignalling extends EventEmitter {
         } );
 
         this.socket.on( 'connle_on_ended', ( data, callback ) => {
+
             this.callId = null;
             this.callType = null;
             this.room_token = null;
@@ -142,6 +143,7 @@ export default class ConnlySignalling extends EventEmitter {
     }
 
     onEnded ( callback ) {
+
         this.onEndedCallback = callback;
     }
 
@@ -204,6 +206,7 @@ export default class ConnlySignalling extends EventEmitter {
 
 
             if ( ack?.code === 100 ) {
+                this.callId = ack?.call_id;
                 this.video.connect( callType.audio, callType.video, ack.token, _this );
             }
             if ( callback ) callback( ack );
@@ -269,9 +272,14 @@ export default class ConnlySignalling extends EventEmitter {
         this.video.toggleScreenShare( this );
     }
 
-    hangup () {
+    hangup ( callback_function ) {
 
         if ( this.video.isConnected() ) {
+            this.socket.emit( 'connle_hangup_call', {
+                call_id: this.callId
+            }, ( data ) => {
+                if ( callback_function ) callback_function( data );
+            } );
             this.video.disconnect( this );
         } else {
             this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
