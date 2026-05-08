@@ -13,6 +13,9 @@ export default class ConnlySignalling extends EventEmitter {
         this.eventHandlers = {};
         this.video = new Video( this.mediaURL );
         this.pingInterval = null;
+        this.answerInFlight = false;
+        this.rejectInFlight = false;
+        this.hangupInFlight = false;
     }
 
     // Initialize a new connection
@@ -49,6 +52,9 @@ export default class ConnlySignalling extends EventEmitter {
 
         this.socket.on( 'disconnect', () => {
             this.isConnected = false;
+            this.answerInFlight = false;
+            this.rejectInFlight = false;
+            this.hangupInFlight = false;
             if ( this.onDisconnectCallback ) this.onDisconnectCallback( { isConnected: this.isConnected } );
             // Stop pinging when disconnected
             if ( this.pingInterval ) {
@@ -82,14 +88,34 @@ export default class ConnlySignalling extends EventEmitter {
 
             this.answer_callback = callback;
 
-            if ( this.onIncomingCallCallback ) this.onIncomingCallCallback( data );
+            if ( this.onIncomingCallCallback ) {
+                try {
+                    this.onIncomingCallCallback( data );
+                    if ( typeof callback === 'function' ) {
+                        callback( { code: 200, message: 'delivered', call_id: data?.call_id } );
+                    }
+                } catch ( error ) {
+                    if ( typeof callback === 'function' ) {
+                        callback( { code: 500, message: 'incoming_handler_failed', call_id: data?.call_id } );
+                    }
+                    this.emit( 'error', { code: 'INCOMING_HANDLER_FAILED', message: error.message } );
+                }
+            } else if ( typeof callback === 'function' ) {
+                callback( { code: 503, message: 'incoming_handler_not_ready', call_id: data?.call_id } );
+            }
         } );
 
         this.socket.on( 'connle_on_ended', ( data, callback ) => {
 
+            if ( this.video && typeof this.video.isConnected === 'function' && this.video.isConnected() ) {
+                this.video.disconnect( this );
+            }
             this.callId = null;
             this.callType = null;
             this.room_token = null;
+            this.answerInFlight = false;
+            this.rejectInFlight = false;
+            this.hangupInFlight = false;
             if ( typeof callback === 'function' ) {
                 callback( 'delivered' );
             }
@@ -102,7 +128,7 @@ export default class ConnlySignalling extends EventEmitter {
         } );
 
         this.socket.on( 'connle_on_answered', ( data ) => {
-            this.callId = null;
+            this.callId = data?.call_id || this.callId;
 
             if ( this.onAnsweredCallback ) this.onAnsweredCallback( data );
         } );
@@ -161,9 +187,18 @@ export default class ConnlySignalling extends EventEmitter {
             this.emit( 'error', { code: 'NO_CALL_INVITE', message: 'No call invite' } );
             return;
         }
+        if ( this.answerInFlight ) return;
 
+        this.answerInFlight = true;
         this.socket.emit( 'connle_answer_call', { call_id: this.callId }, ( ack ) => {
-            this.video.connect( this.callType.audio, this.callType.video, this.room_token, this );
+            if ( ack?.code === 200 ) {
+                if ( !this.video.isConnected() ) {
+                    this.video.connect( this.callType.audio, this.callType.video, this.room_token, this );
+                }
+            } else {
+                this.emit( 'error', ack || { code: 'ANSWER_FAILED', message: 'Answer failed' } );
+            }
+            this.answerInFlight = false;
             if ( callback ) callback( ack );
         } );
     }
@@ -171,7 +206,10 @@ export default class ConnlySignalling extends EventEmitter {
     reject ( callback ) {
         if ( !this.isConnected ) return;
         if ( !this.callId ) return;
+        if ( this.rejectInFlight ) return;
+        this.rejectInFlight = true;
         this.socket.emit( 'connle_reject_call', { call_id: this.callId }, ( ack ) => {
+            this.rejectInFlight = false;
             if ( callback ) callback( ack );
         } );
     }
@@ -274,12 +312,28 @@ export default class ConnlySignalling extends EventEmitter {
 
     hangup ( callback_function ) {
 
-        if ( this.video.isConnected() ) {
+        if ( !this.isConnected ) {
+            this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to signalling' } );
+            return;
+        }
+
+        if ( this.callId ) {
+            if ( this.hangupInFlight ) return;
+            this.hangupInFlight = true;
             this.socket.emit( 'connle_hangup_call', {
                 call_id: this.callId
             }, ( data ) => {
+                this.hangupInFlight = false;
                 if ( callback_function ) callback_function( data );
             } );
+
+            if ( this.video.isConnected() ) {
+                this.video.disconnect( this );
+            }
+            return;
+        }
+
+        if ( this.video.isConnected() ) {
             this.video.disconnect( this );
         } else {
             this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
