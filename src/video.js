@@ -26,6 +26,7 @@ export default class Video {
                 resolution: VideoPresets.h720.resolution,
             },
         } );
+        this.connectAttempt = 0;
 
     }
 
@@ -67,9 +68,7 @@ export default class Video {
     }
 
     async connect ( audio = true, video = false, token, _this ) {
-
-
-
+        const attemptId = ++this.connectAttempt;
         this.cleanupListeners();
 
 
@@ -290,7 +289,23 @@ export default class Video {
             _this.emit( 'error', { code: 'TRACK_PUBLICATION_ERROR', message: error.message } );
         } );
 
-        await this.room.connect( this.serverUrl, token );
+        try {
+            await this.room.connect( this.serverUrl, token );
+        } catch ( error ) {
+            // If another disconnect/cancel already superseded this attempt, ignore.
+            if ( attemptId !== this.connectAttempt ) return;
+            _this.emit( 'error', { code: 'MEDIA_CONNECTION_ERROR', message: error?.message || 'connection_failed' } );
+            return;
+        }
+
+        if ( attemptId !== this.connectAttempt || !this.isConnected() ) {
+            try {
+                if ( this.room?.state === 'connected' || this.room?.state === 'connecting' ) {
+                    this.room.disconnect();
+                }
+            } catch ( _error ) { }
+            return;
+        }
 
         const localParticipant = this.room.localParticipant;
 
@@ -319,11 +334,25 @@ export default class Video {
 
 
         if ( audio ) {
-            await this.localParticipant.setMicrophoneEnabled( true );
+            try {
+                if ( attemptId !== this.connectAttempt || !this.isConnected() ) return;
+                await this.localParticipant.setMicrophoneEnabled( true );
+            } catch ( error ) {
+                if ( attemptId !== this.connectAttempt || !this.isConnected() ) return;
+                _this.emit( 'error', { code: 'MEDIA_CONNECTION_ERROR', message: error?.message || 'microphone_publish_failed' } );
+                return;
+            }
         }
 
         if ( video ) {
-            await this.localParticipant.setCameraEnabled( true );
+            try {
+                if ( attemptId !== this.connectAttempt || !this.isConnected() ) return;
+                await this.localParticipant.setCameraEnabled( true );
+            } catch ( error ) {
+                if ( attemptId !== this.connectAttempt || !this.isConnected() ) return;
+                _this.emit( 'error', { code: 'MEDIA_CONNECTION_ERROR', message: error?.message || 'camera_publish_failed' } );
+                return;
+            }
         }
     }
 
@@ -345,7 +374,7 @@ export default class Video {
     }
 
 
-    mute ( _this ) {
+    async mute ( _this ) {
 
         if ( !this.isConnected() ) {
             _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
@@ -359,15 +388,19 @@ export default class Video {
 
 
         if ( this.localParticipant.isMicrophoneEnabled ) {
-            this.localParticipant.setMicrophoneEnabled( false );
-            _this.emit( 'muted', { audio: true, user_id: this.room.localParticipant.identity } );
+            try {
+                await this.localParticipant.setMicrophoneEnabled( false );
+                _this.emit( 'muted', { audio: true, user_id: this.room.localParticipant.identity } );
+            } catch ( error ) {
+                _this.emit( 'error', { code: 'MUTE_ERROR', message: error?.message || 'mute_failed' } );
+            }
         } else {
             _this.emit( 'error', { code: 'ALREADY_MUTED', message: 'Audio already muted' } );
         }
 
     }
 
-    unmute ( _this ) {
+    async unmute ( _this ) {
 
         if ( !this.isConnected() ) {
             _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
@@ -381,7 +414,7 @@ export default class Video {
 
         if ( !this.localParticipant.isMicrophoneEnabled ) {
             try {
-                this.localParticipant.setMicrophoneEnabled( true );
+                await this.localParticipant.setMicrophoneEnabled( true );
                 _this.emit( 'unmuted', { audio: true, user_id: this.room.localParticipant.identity } );
             } catch ( error ) {
                 _this.emit( 'error', { code: 'UNMUTE_ERROR', message: error.message } );
@@ -412,7 +445,7 @@ export default class Video {
     }
 
 
-    pause ( _this ) {
+    async pause ( _this ) {
         if ( !this.isConnected() ) {
             _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
             return;
@@ -423,14 +456,18 @@ export default class Video {
         }
 
         if ( this.localParticipant.isCameraEnabled ) {
-            this.localParticipant.setCameraEnabled( false );
-            _this.emit( 'paused', { video: true, user_id: this.room.localParticipant.identity } );
+            try {
+                await this.localParticipant.setCameraEnabled( false );
+                _this.emit( 'paused', { video: true, user_id: this.room.localParticipant.identity } );
+            } catch ( error ) {
+                _this.emit( 'error', { code: 'VIDEO_PAUSE_ERROR', message: error?.message || 'pause_failed' } );
+            }
         } else {
             _this.emit( 'error', { code: 'ALREADY_PAUSED', message: 'Video already paused' } );
         }
     }
 
-    play ( _this ) {
+    async play ( _this ) {
         if ( !this.isConnected() ) {
             _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
             return;
@@ -443,7 +480,7 @@ export default class Video {
 
         if ( !this.localParticipant.isCameraEnabled ) {
             try {
-                this.localParticipant.setCameraEnabled( true );
+                await this.localParticipant.setCameraEnabled( true );
                 _this.emit( 'play', { video: true, user_id: this.room.localParticipant.identity } );
             } catch ( error ) {
                 _this.emit( 'error', { code: 'VIDEO_PLAY_ERROR', message: error.message } );
@@ -475,7 +512,7 @@ export default class Video {
     }
 
 
-    shareScreen ( _this ) {
+    async shareScreen ( _this ) {
         if ( !this.isConnected() ) {
             _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
             return;
@@ -488,7 +525,7 @@ export default class Video {
 
         if ( !this.localParticipant.isScreenShareEnabled ) {
             try {
-                this.localParticipant.setScreenShareEnabled( true );
+                await this.localParticipant.setScreenShareEnabled( true );
                 _this.emit( 'screenShared', { screen: true, user_id: this.room.localParticipant.identity } );
             } catch ( error ) {
                 _this.emit( 'error', { code: 'SCREEN_SHARE_ERROR', message: error.message } );
@@ -498,7 +535,7 @@ export default class Video {
         }
     }
 
-    stopScreenShare ( _this ) {
+    async stopScreenShare ( _this ) {
         if ( !this.isConnected() ) {
             _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to room' } );
             return;
@@ -510,8 +547,12 @@ export default class Video {
         }
 
         if ( this.localParticipant.isScreenShareEnabled ) {
-            this.localParticipant.setScreenShareEnabled( false );
-            _this.emit( 'screenUnshared', { screen: true, user_id: this.room.localParticipant.identity } );
+            try {
+                await this.localParticipant.setScreenShareEnabled( false );
+                _this.emit( 'screenUnshared', { screen: true, user_id: this.room.localParticipant.identity } );
+            } catch ( error ) {
+                _this.emit( 'error', { code: 'SCREEN_UNSHARE_ERROR', message: error?.message || 'screen_unshare_failed' } );
+            }
         } else {
             _this.emit( 'error', { code: 'ALREADY_UNSHARED', message: 'Screen already unshared' } );
         }
@@ -552,12 +593,17 @@ export default class Video {
     }
 
     disconnect ( _this ) {
+        this.connectAttempt += 1;
 
-        if ( !this.isConnected() ) {
-            _this.emit( 'error', { code: 'NOT_CONNECTED', message: 'Not connected to call' } );
+        if ( !this.room ) return;
+
+        if ( this.room.state === 'connected' || this.room.state === 'connecting' ) {
+            this.room.disconnect();
             return;
         }
-        this.room.disconnect();
+
+        // No active room connection; this is a harmless no-op during cancel/cleanup.
+        return;
     }
 
 
@@ -565,4 +611,3 @@ export default class Video {
 
 
 }
-
