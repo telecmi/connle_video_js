@@ -234,6 +234,37 @@ initCall();
 
 ---
 
+## Development
+
+If you wish to build or modify the SDK locally:
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run in development mode (Webpack dev server):**
+   ```bash
+   npm start
+   ```
+
+3. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+4. **Build for Node.js (via Babel):**
+   ```bash
+   npm run build-node
+   ```
+
+5. **Run tests:**
+   ```bash
+   npm test
+   ```
+
+---
+
 ## Final Notes
 
 - **Permissions**: Ensure camera/mic access is granted.
