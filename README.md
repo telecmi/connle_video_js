@@ -23,7 +23,7 @@ In your JavaScript/TypeScript file:
 import ConnleVideo from 'connle-video-sdk';
 
 const serverUrl = 'https://your-server.com';
-const token = 'YOUR_JWT_TOKEN';
+const token = '<YOUR_TOKEN>';
 const mediaUrl = 'https://your-media-url'; // Optional. Uses default if not provided.
 
 // Create an instance of ConnleVideo
@@ -204,7 +204,7 @@ import ConnleVideo from 'connle-video-sdk';
 function initCall() {
   const connleai = new ConnleVideo(
     'https://your-server.com',
-    'YOUR_JWT_TOKEN',
+    '<YOUR_TOKEN>',
     'https://your-media-url'
   );
 
