@@ -2,12 +2,14 @@ import io from 'socket.io-client';
 import { EventEmitter } from 'events';
 import Video from './video';
 
+const DEFAULT_MEDIA_URL = 'wss://sfu.connle.com';
+
 export default class ConnlySignalling extends EventEmitter {
     constructor(serverUrl, token, mediaURL) {
         super();
         this.serverUrl = serverUrl;
         this.token = token;
-        this.mediaURL = mediaURL;
+        this.mediaURL = mediaURL || DEFAULT_MEDIA_URL;
         this.isConnected = false;
         this.eventHandlers = {};
         this.eventHandlers = {};
@@ -18,6 +20,7 @@ export default class ConnlySignalling extends EventEmitter {
         this.hangupInFlight = false;
         this.outboundCallInFlight = false;
         this.outboundCancelRequested = false;
+        this.pendingIncomingCall = null;
     }
 
     // Initialize a new connection
@@ -32,11 +35,12 @@ export default class ConnlySignalling extends EventEmitter {
         this.socket = io(this.serverUrl, {
             query: {
                 token: this.token,
-                reconnection: true,
-                reconnectionAttempts: Infinity,
-                reconnectionDelay: 500,
-                timeout: 10000
             },
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 500,
+            timeout: 10000,
         });
 
         // Handle connection events
@@ -73,39 +77,24 @@ export default class ConnlySignalling extends EventEmitter {
 
         // Error handling
         this.socket.on('connect_error', (error) => {
-            if (this.onErrorCallback) this.onErrorCallback(error);
+            this.emitError(error);
         });
 
         this.socket.on('error', (error) => {
-            if (this.onErrorCallback) this.onErrorCallback(error);
+            this.emitError(error);
         });
 
 
         this.socket.on('connle_on_incoming_call', (data, callback) => {
+            this.prepareIncomingCall(data);
+            const delivered = this.deliverIncomingCall(data);
 
-
-            if (data?.call_id) {
-                this.callId = data?.call_id;
-                this.callType = data?.media;
-                this.room_token = data?.token;
-            }
-
-            this.answer_callback = callback;
-
-            if (this.onIncomingCallCallback) {
-                try {
-                    this.onIncomingCallCallback(data);
-                    if (typeof callback === 'function') {
-                        callback({ code: 200, message: 'delivered', call_id: data?.call_id });
-                    }
-                } catch (error) {
-                    if (typeof callback === 'function') {
-                        callback({ code: 500, message: 'incoming_handler_failed', call_id: data?.call_id });
-                    }
-                    this.emit('error', { code: 'INCOMING_HANDLER_FAILED', message: error.message });
-                }
-            } else if (typeof callback === 'function') {
-                callback({ code: 503, message: 'incoming_handler_not_ready', call_id: data?.call_id });
+            if (typeof callback === 'function') {
+                callback({
+                    code: 200,
+                    message: delivered ? 'delivered' : 'queued',
+                    call_id: data?.call_id,
+                });
             }
         });
 
@@ -138,6 +127,78 @@ export default class ConnlySignalling extends EventEmitter {
 
             if (this.onAnsweredCallback) this.onAnsweredCallback(data);
         });
+    }
+
+    normalizeCallMedia(media) {
+        const normalizeFlag = (value, fallback) => {
+            if (typeof value === 'boolean') return value;
+            if (typeof value === 'number') return value !== 0;
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+                if (['true', '1', 'yes', 'y', 'video', 'audio_video', 'audio-video'].includes(normalized)) return true;
+                if (['false', '0', 'no', 'n', 'audio'].includes(normalized)) return false;
+            }
+            return fallback;
+        };
+
+        if (media && typeof media === 'object') {
+            const mediaType = media.type || media.media || media.kind || media.call_type;
+            return {
+                audio: normalizeFlag(media.audio, true),
+                video: normalizeFlag(media.video, normalizeFlag(mediaType, false)),
+            };
+        }
+
+        if (typeof media === 'string') {
+            const normalized = media.toLowerCase();
+            return {
+                audio: true,
+                video: normalized === 'video' || normalized === 'audio_video' || normalized === 'audio-video',
+            };
+        }
+
+        return { audio: true, video: false };
+    }
+
+    prepareIncomingCall(data) {
+        if (!data?.call_id) return;
+        this.callId = data.call_id;
+        this.callType = this.normalizeCallMedia(data?.media);
+        this.room_token = data?.token;
+        this.pendingIncomingCall = data;
+    }
+
+    deliverIncomingCall(data) {
+        const hasCallback = typeof this.onIncomingCallCallback === 'function';
+        const hasEventListeners = this.listenerCount('incomingCall') > 0;
+
+        if (!hasCallback && !hasEventListeners) {
+            this.pendingIncomingCall = data;
+            return false;
+        }
+
+        try {
+            if (hasCallback) this.onIncomingCallCallback(data);
+            if (hasEventListeners) this.emit('incomingCall', data);
+            this.pendingIncomingCall = null;
+            return true;
+        } catch (error) {
+            this.emitError({ code: 'INCOMING_HANDLER_FAILED', message: error?.message || 'incoming_handler_failed' });
+            return false;
+        }
+    }
+
+    flushPendingIncomingCall() {
+        if (this.pendingIncomingCall) {
+            this.deliverIncomingCall(this.pendingIncomingCall);
+        }
+    }
+
+    emitError(error) {
+        if (this.onErrorCallback) this.onErrorCallback(error);
+        if (this.listenerCount('error') > 0) {
+            this.emit('error', error);
+        }
     }
 
     // Connection Event Handlers
@@ -183,21 +244,26 @@ export default class ConnlySignalling extends EventEmitter {
     onIncomingCall(callback) {
 
         this.onIncomingCallCallback = callback;
+        this.flushPendingIncomingCall();
     }
 
     connectMedia(audio, video, token) {
+        if (!token) {
+            this.emitError({ code: 'MEDIA_TOKEN_MISSING', message: 'Media token missing' });
+            return;
+        }
         this.video.connect(audio, video, token, this).catch((error) => {
-            this.emit('error', { code: 'MEDIA_CONNECTION_ERROR', message: error?.message || 'media_connect_failed' });
+            this.emitError({ code: 'MEDIA_CONNECTION_ERROR', message: error?.message || 'media_connect_failed' });
         });
     }
 
     answer(callback) {
         if (!this.isConnected) {
-            this.emit('error', { code: 'NOT_CONNECTED', message: 'Not connected to call' });
+            this.emitError({ code: 'NOT_CONNECTED', message: 'Not connected to call' });
             return;
         }
         if (!this.callId) {
-            this.emit('error', { code: 'NO_CALL_INVITE', message: 'No call invite' });
+            this.emitError({ code: 'NO_CALL_INVITE', message: 'No call invite' });
             return;
         }
         if (this.answerInFlight) return;
@@ -206,10 +272,11 @@ export default class ConnlySignalling extends EventEmitter {
         this.socket.emit('connle_answer_call', { call_id: this.callId }, (ack) => {
             if (ack?.code === 200) {
                 if (!this.video.isConnected()) {
-                    this.connectMedia(this.callType.audio, this.callType.video, this.room_token);
+                    const callType = this.callType || this.normalizeCallMedia();
+                    this.connectMedia(callType.audio, callType.video, this.room_token);
                 }
             } else {
-                this.emit('error', ack || { code: 'ANSWER_FAILED', message: 'Answer failed' });
+                this.emitError(ack || { code: 'ANSWER_FAILED', message: 'Answer failed' });
             }
             this.answerInFlight = false;
             if (callback) callback(ack);
@@ -338,9 +405,24 @@ export default class ConnlySignalling extends EventEmitter {
         this.video.toggleScreenShare(this);
     }
 
+    // Route call audio to the loudspeaker (true) or earpiece (false).
+    // React Native only; no-op on web.
+    setSpeaker(enabled) {
+        this.video.setSpeaker(enabled, this);
+    }
+
+    toggleSpeaker() {
+        this.video.toggleSpeaker(this);
+    }
+
+    // Flip between front and back camera (React Native).
+    switchCamera() {
+        this.video.switchCamera(this);
+    }
+
     cancelOutgoingCall(callback_function) {
         if (!this.isConnected) {
-            this.emit('error', { code: 'NOT_CONNECTED', message: 'Not connected to signalling' });
+            this.emitError({ code: 'NOT_CONNECTED', message: 'Not connected to signalling' });
             return;
         }
 
@@ -361,7 +443,7 @@ export default class ConnlySignalling extends EventEmitter {
     hangup(callback_function) {
 
         if (!this.isConnected) {
-            this.emit('error', { code: 'NOT_CONNECTED', message: 'Not connected to signalling' });
+            this.emitError({ code: 'NOT_CONNECTED', message: 'Not connected to signalling' });
             return;
         }
 
@@ -386,7 +468,7 @@ export default class ConnlySignalling extends EventEmitter {
         if (this.video?.isConnected()) {
             this.video.disconnect(this);
         } else {
-            this.emit('error', { code: 'NOT_CONNECTED', message: 'Not connected to call' });
+            this.emitError({ code: 'NOT_CONNECTED', message: 'Not connected to call' });
         }
     }
 
