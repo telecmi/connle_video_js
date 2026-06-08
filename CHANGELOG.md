@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.0] - 2026-06-08
+## [0.3.1] - 2026-06-08
 
 ### Added
 - **React Native support (iOS & Android)**: the SDK now runs on React Native via
