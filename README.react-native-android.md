@@ -5,7 +5,7 @@
 > 🤖 **This is the Android guide.** Building for **iOS** or **Web / Electron**?
 > → **[iOS guide](README.react-native-ios.md)** · **[Web & Electron guide](README.web.md)**
 
-Use `connle-video-sdk` in a **bare React Native** Android app to make and receive
+Use `@telecmi/connle-video` in a **bare React Native** Android app to make and receive
 audio & video calls.
 
 ---
@@ -22,12 +22,12 @@ audio & video calls.
 ## 1. Install the SDK and its native peers
 
 ```bash
-npm install connle-video-sdk @livekit/react-native@2.8.0 @livekit/react-native-webrtc@^125.0.12
+npm install @telecmi/connle-video @livekit/react-native@2.8.0 @livekit/react-native-webrtc@^125.0.12
 ```
 
 | Package | Why it's needed |
 | :--- | :--- |
-| `connle-video-sdk` | The Connle SDK (signalling + call control). |
+| `@telecmi/connle-video` | The Connle SDK (signalling + call control). |
 | `@livekit/react-native` | LiveKit RN bindings: `registerGlobals()` + audio session. **Required.** |
 | `@livekit/react-native-webrtc` | The native WebRTC implementation. **Required.** |
 
@@ -100,7 +100,7 @@ npx react-native run-android
 import React, { useEffect, useRef, useState } from 'react';
 import { View, PermissionsAndroid } from 'react-native';
 import { VideoView } from '@livekit/react-native';
-import ConnleVideo from 'connle-video-sdk';
+import ConnleVideo from '@telecmi/connle-video';
 
 export default function CallScreen() {
   const connleRef = useRef(null);

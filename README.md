@@ -18,14 +18,14 @@ The **call API is identical** everywhere; it's in the [API reference](#api-refer
 | 🤖 **React Native Android** | **→ [Android guide](README.react-native-android.md)** |
 
 ```bash
-npm install connle-video-sdk
+npm install @telecmi/connle-video
 ```
 
 > [!NOTE]
 > **React Native** additionally needs the native peers `@livekit/react-native`
 > and `@livekit/react-native-webrtc` — see the
 > [iOS guide](README.react-native-ios.md) and [Android guide](README.react-native-android.md).
-> **Web & Electron** users install only `connle-video-sdk`.
+> **Web & Electron** users install only `@telecmi/connle-video`.
 
 > [!TIP]
 > A complete, runnable React Native example app (inbound + outbound audio/video
@@ -40,7 +40,7 @@ A complete example — create the client, connect, place/answer calls, and handl
 media. This works on both Web and React Native.
 
 ```javascript
-import ConnleVideo from 'connle-video-sdk';
+import ConnleVideo from '@telecmi/connle-video';
 
 // 1. Create the client
 const connle = new ConnleVideo(
@@ -83,7 +83,7 @@ connle.call('bob123', { audio: true, video: true }, (ack) => {
 Create a `ConnleVideo` instance. This is the same on every platform.
 
 ```javascript
-import ConnleVideo from 'connle-video-sdk';
+import ConnleVideo from '@telecmi/connle-video';
 
 const connle = new ConnleVideo(serverUrl, token, mediaUrl);
 connle.connect();

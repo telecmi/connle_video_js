@@ -20,17 +20,14 @@ module.exports = {
         hot: true
     },
     plugins: [
+        // Demo page template lives in public/ — NEVER in dist/ (dist is build
+        // output; a template there gets edited with real credentials during
+        // testing and then ships to npm — exactly the leak the piopiyjs
+        // package had until 0.24).
         new HtmlWebpackPlugin( {
-            template: './dist/index.html',
+            template: './public/index.html',
             filename: 'index.html',
-            inject: 'head' // Inject script in head
-        } ),
-
-        // Chat page (uses same JS)
-        new HtmlWebpackPlugin( {
-            template: './dist/chat.html',
-            filename: 'chat.html',
-            inject: 'head' // Inject script in head
+            inject: 'head'
         } )
     ]
 };

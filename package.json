@@ -1,5 +1,5 @@
 {
-  "name": "connle-video-sdk",
+  "name": "@telecmi/connle-video",
   "title": "Connle Video SDK for Web, Electron, and React Native",
   "version": "0.3.1",
   "description": "Official Connle WebRTC SDK for high-quality 1-to-1 voice and video calls on Web, Electron, and React Native (iOS & Android).",
@@ -18,7 +18,6 @@
   ],
   "files": [
     "lib",
-    "dist",
     "index.d.ts",
     "README.md",
     "README.web.md",
@@ -34,7 +33,8 @@
     "start": "webpack serve --host 0.0.0.0 --mode development ",
     "build-node": "babel src --out-dir lib --extensions .js",
     "build:dev": "webpack --mode development",
-    "test": "jest"
+    "test": "jest",
+    "prepublishOnly": "npm run build-node && npm run build"
   },
   "author": "",
   "license": "MIT",
@@ -63,5 +63,16 @@
     "@livekit/react-native-webrtc": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/telecmi/connle_video_js.git"
+  },
+  "homepage": "https://github.com/telecmi/connle_video_js#readme",
+  "bugs": {
+    "url": "https://github.com/telecmi/connle_video_js/issues"
   }
 }

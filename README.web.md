@@ -5,7 +5,7 @@
 > 🌐 **This is the Web & Electron guide.** Building a **React Native** app instead?
 > → **[iOS guide](README.react-native-ios.md)** · **[Android guide](README.react-native-android.md)**
 
-Use `connle-video-sdk` in a browser or Electron app to make and receive audio &
+Use `@telecmi/connle-video` in a browser or Electron app to make and receive audio &
 video calls.
 
 > The **call API** (methods & events) is the same on every platform — see the
@@ -27,14 +27,14 @@ video calls.
 ## 1. Install
 
 ```bash
-npm install connle-video-sdk
+npm install @telecmi/connle-video
 ```
 
 > [!NOTE]
-> On Web and Electron you install **only** `connle-video-sdk`. The
+> On Web and Electron you install **only** `@telecmi/connle-video`. The
 > `@livekit/react-native*` packages are for React Native — do not install them here.
 
-`import ConnleVideo from 'connle-video-sdk'` automatically resolves the **browser
+`import ConnleVideo from '@telecmi/connle-video'` automatically resolves the **browser
 build** (the package's `main` entry); the browser's built-in WebRTC is used.
 
 > [!TIP]
@@ -47,7 +47,7 @@ build** (the package's `main` entry); the browser's built-in WebRTC is used.
 ## 2. Initialize and connect
 
 ```js
-import ConnleVideo from 'connle-video-sdk';
+import ConnleVideo from '@telecmi/connle-video';
 
 const connle = new ConnleVideo(
   'wss://signal.connle.com',  // signalling URL
