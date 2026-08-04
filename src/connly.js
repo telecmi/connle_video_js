@@ -1,15 +1,27 @@
 import io from 'socket.io-client';
 import { EventEmitter } from 'events';
 import Video from './video';
+// Platform-resolved: push.native.js on React Native, push.js (no-op) on web.
+import ConnlePush from './push';
 
 const DEFAULT_MEDIA_URL = 'wss://sfu.connle.com';
 
 export default class ConnlySignalling extends EventEmitter {
-    constructor(serverUrl, token, mediaURL) {
+    constructor(serverUrl, token, mediaURL, options) {
         super();
         this.serverUrl = serverUrl;
         this.token = token;
         this.mediaURL = mediaURL || DEFAULT_MEDIA_URL;
+        this.options = options || {};
+        // Push wake-ups for incoming video calls (React Native only; no-op on
+        // web). Registers this device's token with TeleCMI REST and receives
+        // 'video_call'/'video_cancel' pushes — coexists with the voice SDK in
+        // the same app via the shared TeleCMI push router. Disable with
+        // { autoPush: false }.
+        this._push = new ConnlePush(this, this.options.push);
+        if (this.options.autoPush !== false) {
+            try { this._push.start(); } catch { /* inert without push libs */ }
+        }
         this.isConnected = false;
         this.eventHandlers = {};
         this.eventHandlers = {};
@@ -241,6 +253,31 @@ export default class ConnlySignalling extends EventEmitter {
     }
 
     // Incoming Call Handling Methods
+    // --- push-delivered calls (React Native) ---
+    // A video call arrived by push while the app was backgrounded/killed or
+    // foreground: surface it exactly like a socket-delivered incoming call so
+    // app UIs work unchanged (payload has transport:'push').
+    _onPushIncoming(data) {
+        try {
+            if (typeof this.onIncomingCallCallback === 'function') this.onIncomingCallCallback(data);
+            this.emit('incomingCall', data);
+        } catch (error) {
+            this.emitError({ code: 'PUSH_INCOMING_FAILED', message: error?.message || 'push_incoming_failed' });
+        }
+    }
+
+    // The caller cancelled while this device was ringing (push-delivered).
+    _onPushCancel(data) {
+        try {
+            this.emit('callCancelled', { ...data, transport: 'push' });
+        } catch { /* ignore */ }
+    }
+
+    /** Remove this device's video push registration (e.g. on sign-out). */
+    unregisterPush(callback) {
+        this._push.unregister(callback);
+    }
+
     onIncomingCall(callback) {
 
         this.onIncomingCallCallback = callback;
@@ -318,7 +355,6 @@ export default class ConnlySignalling extends EventEmitter {
         }
 
         const callData = { userid: userId, media: callType };
-        const _this = this;
         this.outboundCallInFlight = true;
         this.outboundCancelRequested = false;
 

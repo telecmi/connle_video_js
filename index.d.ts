@@ -21,11 +21,28 @@ export default class ConnleVideo {
    * @param token      Auth token that identifies the connecting user.
    * @param mediaURL   Media / SFU WebSocket URL (e.g. wss://sfu.connle.com). Optional.
    */
-  constructor(serverUrl: string, token: string, mediaURL?: string);
+  constructor(
+    serverUrl: string,
+    token: string,
+    mediaURL?: string,
+    options?: {
+      /**
+       * React Native: automatically register this device's push token with
+       * TeleCMI and receive incoming-video-call pushes ('video_call' /
+       * 'video_cancel'), including when the voice SDK shares the app (one
+       * push pipeline, routed by payload type). Default true; no-op on web.
+       */
+      autoPush?: boolean;
+      /** Override the push REST endpoints (testing/staging). */
+      push?: { apiBase?: string; registerPath?: string; unregisterPath?: string };
+    },
+  );
 
   // ---- Connection ----
   /** Open the signalling connection. */
   connect(): void;
+  /** Remove this device's video push registration (e.g. on sign-out). React Native only. */
+  unregisterPush(callback?: ConnleAck): void;
   /** Close the signalling connection. */
   disconnect(): void;
 

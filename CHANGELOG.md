@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-08-04
+
+### Added
+- **Push wake-ups for incoming video calls (React Native).** The SDK registers this device's push token with TeleCMI REST automatically (`autoPush`, on by default; `unregisterPush()` for sign-out) and receives `video_call` / `video_cancel` pushes sent by the video push server — surfaced through the same `onIncomingCall` path with `transport: 'push'`, so app UIs work unchanged.
+- **Voice + video SDKs coexist in one app.** A shared TeleCMI push router (no dependency between the packages) gives the app ONE push pipeline: whichever SDK loads first owns the OS handlers, every payload routes by its `type`, the device token is fetched once and shared, and each SDK works identically when installed alone.
+
 ## [0.4.0] - 2026-08-04
 
 ### Changed

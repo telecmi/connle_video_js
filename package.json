@@ -1,7 +1,7 @@
 {
   "name": "@telecmi/connle-video",
   "title": "Connle Video SDK for Web, Electron, and React Native",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Official Connle WebRTC SDK for high-quality 1-to-1 voice and video calls on Web, Electron, and React Native (iOS & Android).",
   "main": "lib/index.js",
   "react-native": "lib/index.js",
