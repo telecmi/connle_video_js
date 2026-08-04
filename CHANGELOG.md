@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-08-04
+
+### Changed
+- **Package renamed: `connle-video-sdk` → `@telecmi/connle-video`** (the old npm name was stale at 0.1.6 — none of the React Native support ever shipped under it). Update imports: `import ConnleVideo from '@telecmi/connle-video'`.
+- **Media controls are async**: `toggleAudio()`, `toggleVideo()`, `play()`, `pause()`, `toggleScreenShare()` now return promises that resolve with the actual state change — adopted from the production app's battle-tested copy.
+- Packaging hygiene: npm ships exactly the built `lib/` + typings + docs (files whitelist, `prepublishOnly` build); build outputs are no longer committed to the repo.
+
 ## [0.3.1] - 2026-06-08
 
 ### Added
