@@ -58,6 +58,11 @@ export default class ConnlySignalling extends EventEmitter {
         // Handle connection events
         this.socket.on('connect', () => {
             this.isConnected = true;
+            // Register the device push token now — connect succeeding proves
+            // this session's token is valid (same pattern as the voice SDK,
+            // which registers on login success). Re-fires on every reconnect,
+            // so a registration lost to a network blip converges.
+            try { this._push.onConnected(); } catch { /* inert without push */ }
             if (this.onConnectCallback) this.onConnectCallback({ isConnected: this.isConnected });
 
             if (this.pingInterval) clearInterval(this.pingInterval);

@@ -2,5 +2,6 @@
 export default class ConnlePush {
     constructor() { }
     start() { return false; }
+    onConnected() { }
     unregister( callback ) { if ( typeof callback === 'function' ) callback( { code: 200, status: 'no push on web' } ); }
 }

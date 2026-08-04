@@ -218,7 +218,22 @@ export default class ConnlePush {
         if ( !info || !info.token ) return;
         this.deviceToken = info;
         if ( this.registered === info.token ) return;
-        this._register( info );
+        // Send only while CONNECTED — connect succeeding proves the session
+        // token is valid. A token that arrives earlier is held; onConnected()
+        // sends it the moment the session is live.
+        if ( this.connle && this.connle.isConnected ) {
+            this._register( info );
+        } else {
+            dbg( 'device token held — registering when connected' );
+        }
+    }
+
+    /** Called by the SDK on every successful connect: register (or re-register)
+     *  the held device token. Idempotent — an already-sent token is skipped. */
+    onConnected() {
+        if ( this.deviceToken && this.registered !== this.deviceToken.token ) {
+            this._register( this.deviceToken );
+        }
     }
 
     // POST the token to TeleCMI REST (same REST as voice, video endpoint).
