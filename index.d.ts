@@ -11,6 +11,11 @@ export type ConnleHandler = (data: any) => void;
 export type ConnleAck = (ack: any) => void;
 
 export default class ConnleVideo {
+  socket?: any;
+  video?: any;
+  isConnected?: boolean;
+  outboundCallInFlight?: boolean;
+
   /**
    * @param serverUrl  Signalling WebSocket URL (e.g. wss://signal.connle.com).
    * @param token      Auth token that identifies the connecting user.

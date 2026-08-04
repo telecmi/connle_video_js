@@ -377,32 +377,32 @@ export default class ConnlySignalling extends EventEmitter {
         this.video.unmute(this);
     }
 
-    toggleAudio() {
-        this.video.toggleAudio(this);
+    async toggleAudio() {
+        return await this.video.toggleAudio(this);
     }
 
-    toggleVideo() {
-        this.video.toggleVideo(this);
+    async toggleVideo() {
+        return await this.video.toggleVideo(this);
     }
 
-    play() {
-        this.video.play(this);
+    async play() {
+        return await this.video.play(this);
     }
 
-    pause() {
-        this.video.pause(this);
+    async pause() {
+        return await this.video.pause(this);
     }
 
-    shareScreen() {
-        this.video.shareScreen(this);
+    async shareScreen() {
+        return await this.video.shareScreen(this);
     }
 
-    stopScreenShare() {
-        this.video.stopScreenShare(this);
+    async stopScreenShare() {
+        return await this.video.stopScreenShare(this);
     }
 
-    toggleScreenShare() {
-        this.video.toggleScreenShare(this);
+    async toggleScreenShare() {
+        return await this.video.toggleScreenShare(this);
     }
 
     // Route call audio to the loudspeaker (true) or earpiece (false).
