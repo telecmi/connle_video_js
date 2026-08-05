@@ -122,8 +122,8 @@ function loadVoipPush() {
 }
 
 const DEFAULT_API_BASE = 'https://rest.telecmi.com/v2';
-const DEFAULT_REGISTER_PATH = '/connle/push/register';
-const DEFAULT_UNREGISTER_PATH = '/connle/push/unregister';
+const DEFAULT_REGISTER_PATH = '/connly/push/register';
+const DEFAULT_UNREGISTER_PATH = '/connly/push/unregister';
 
 export default class ConnlePush {
 
