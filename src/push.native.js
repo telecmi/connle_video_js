@@ -1,7 +1,7 @@
 // Push wake-up support for @telecmi/connle-video — React Native build.
 //
-// Registers this device's push token with the TeleCMI REST API (same REST as
-// voice, different endpoint) so the connle_livekit_push server can wake the
+// Registers this device's push token with the connle REST API
+// (api.connle.com — the same service that issued the login token) so the connle_livekit_push server can wake the
 // app for incoming VIDEO calls, and receives those pushes.
 //
 // Coexistence with @telecmi/piopiy-native (voice) in the SAME app is handled
@@ -121,9 +121,9 @@ function loadVoipPush() {
     }
 }
 
-const DEFAULT_API_BASE = 'https://rest.telecmi.com/v2';
-const DEFAULT_REGISTER_PATH = '/connly/push/register';
-const DEFAULT_UNREGISTER_PATH = '/connly/push/unregister';
+const DEFAULT_API_BASE = 'https://api.connle.com';
+const DEFAULT_REGISTER_PATH = '/video/push/register';
+const DEFAULT_UNREGISTER_PATH = '/video/push/unregister';
 
 export default class ConnlePush {
 
