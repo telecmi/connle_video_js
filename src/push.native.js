@@ -289,7 +289,15 @@ export default class ConnlePush {
     }
 
     // A video push arrived (routed to us by type, any app state).
-    _onPush( data ) {
+    _onPush( raw ) {
+        // Normalize transport differences so the app sees ONE shape:
+        // FCM remaps the reserved 'from' key to 'caller' and stringifies all
+        // values (media arrives as a JSON string); APNs delivers as-is.
+        const data = { ...raw };
+        if ( !data.from && data.caller ) data.from = data.caller;
+        if ( typeof data.media === 'string' ) {
+            try { data.media = JSON.parse( data.media ); } catch { /* keep as-is */ }
+        }
         try {
             if ( data.type === 'video_cancel' ) {
                 if ( typeof this.connle._onPushCancel === 'function' ) this.connle._onPushCancel( data );
