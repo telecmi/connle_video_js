@@ -117,3 +117,10 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Firebase (FCM push for incoming video calls). Applied only when
+// google-services.json is present — the example runs fine without it
+// (calls work; push token generation is skipped with a log).
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}

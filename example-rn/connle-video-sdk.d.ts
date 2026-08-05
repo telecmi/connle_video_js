@@ -12,7 +12,15 @@ declare module 'connle-video-sdk' {
   }
 
   export default class ConnleVideo {
-    constructor(serverUrl: string, token: string, mediaURL?: string);
+    constructor(
+      serverUrl: string,
+      token: string,
+      mediaURL?: string,
+      options?: {
+        autoPush?: boolean;
+        push?: {apiBase?: string; registerPath?: string; unregisterPath?: string};
+      },
+    );
 
     /** Open the signalling connection. */
     connect(): void;

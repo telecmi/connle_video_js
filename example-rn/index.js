@@ -1,3 +1,5 @@
+// Surface the SDK's internal diagnostics (push token, routing) in Metro.
+globalThis.__connleLog = (l) => console.log('[connle-video]', l);
 /**
  * @format
  */

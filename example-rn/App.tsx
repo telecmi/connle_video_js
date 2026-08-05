@@ -32,9 +32,16 @@ import ConnleVideo from 'connle-video-sdk';
 
 type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
 
-// Production endpoints — same as the Electron app. Only a token is required.
-const DEFAULT_SERVER = 'wss://signal.connle.com';
+// LOCAL PUSH TEST — signalling + REST run on the dev Mac (device must be on
+// the same Wi-Fi). Media stays on the production SFU because the local
+// connle_livekit issues room tokens for sfu.connle.com.
+// Production values: server wss://signal.connle.com, PUSH_REST undefined.
+const DEFAULT_SERVER = 'ws://192.168.0.211:2029';
 const DEFAULT_MEDIA  = 'wss://sfu.connle.com';
+// connly_rest — used for BOTH /agent/login (email+password → token) and the
+// SDK's push registration (/video/push/register). Production: https://api.connle.com
+const REST_BASE = 'http://192.168.0.211:6001';
+const PUSH_REST: string | undefined = REST_BASE;
 
 function safeStringify(value: any): string {
   try {
@@ -128,7 +135,8 @@ export default function App(): React.JSX.Element {
 
   // Form fields
   const [serverUrl,  setServerUrl]  = useState(DEFAULT_SERVER);
-  const [token,      setToken]      = useState('');
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
   const [mediaUrl,   setMediaUrl]   = useState(DEFAULT_MEDIA);
   const [targetUser, setTargetUser] = useState('');
   const [wantVideo,  setWantVideo]  = useState(true);
@@ -269,9 +277,34 @@ export default function App(): React.JSX.Element {
   }, []);
 
   // ---- Handlers ----
-  const onConnect = useCallback(() => {
-    if (!serverUrl.trim() || !token.trim()) {
-      Alert.alert('Missing info', 'Enter the signalling URL and your token.');
+  // Login via connly_rest (email+password → token), then connect the SDK with
+  // that token — the same token also authorizes the push registration.
+  const onConnect = useCallback(async () => {
+    if (!serverUrl.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Missing info', 'Enter the signalling URL, email and password.');
+      return;
+    }
+
+    let sdkToken: string;
+    try {
+      setStatus('Logging in…');
+      log(`POST ${REST_BASE}/agent/login (${email.trim()})`);
+      const resp = await fetch(`${REST_BASE}/agent/login`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email_id: email.trim(), password}),
+      });
+      const data = await resp.json();
+      if (data?.code !== 200 || !data?.token) {
+        setStatus(`Login failed: ${data?.msg ?? 'unknown'} (code ${data?.code})`);
+        log(`login failed: ${safeStringify(data)}`);
+        return;
+      }
+      sdkToken = data.token;
+      log('login OK — token received');
+    } catch (e: any) {
+      setStatus(`Login error: ${e?.message ?? e}`);
+      log(`login error: ${e?.message ?? e}`);
       return;
     }
 
@@ -279,12 +312,17 @@ export default function App(): React.JSX.Element {
       connleRef.current?.disconnect();
       connleRef.current?.removeAllListeners();
     } catch {}
-    const connleai = new ConnleVideo(serverUrl.trim(), token.trim(), mediaUrl.trim() || undefined);
+    const connleai = new ConnleVideo(
+      serverUrl.trim(),
+      sdkToken,
+      mediaUrl.trim() || undefined,
+      PUSH_REST ? {push: {apiBase: PUSH_REST}} : undefined,
+    );
     connleRef.current = connleai;
     wireEvents(connleai);
     setStatus('Connecting…');
     connleai.connect();
-  }, [serverUrl, token, mediaUrl, wireEvents, log]);
+  }, [serverUrl, email, password, mediaUrl, wireEvents, log]);
 
   const onDisconnect = useCallback(() => {
     connleRef.current?.disconnect();
@@ -392,9 +430,12 @@ export default function App(): React.JSX.Element {
             <TextInput style={styles.input} placeholder="Signalling URL (wss://…)"
               autoCapitalize="none" autoCorrect={false}
               value={serverUrl} onChangeText={setServerUrl} />
-            <TextInput style={styles.input} placeholder="Token"
-              autoCapitalize="none" autoCorrect={false}
-              value={token} onChangeText={setToken} />
+            <TextInput style={styles.input} placeholder="Email"
+              autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
+              value={email} onChangeText={setEmail} />
+            <TextInput style={styles.input} placeholder="Password"
+              autoCapitalize="none" autoCorrect={false} secureTextEntry
+              value={password} onChangeText={setPassword} />
             <TextInput style={styles.input} placeholder="Media / SFU URL (wss://…)"
               autoCapitalize="none" autoCorrect={false}
               value={mediaUrl} onChangeText={setMediaUrl} />
