@@ -133,6 +133,48 @@ function loadVoipPush() {
 }
 
 // LOCAL TEST — revert to https://api.connle.com before publishing.
+// Android native incoming-call UI (ConnectionService via the bundled
+// @telecmi/react-native-callkeep). iOS never uses this path — the app's
+// AppDelegate reports to CallKit inside the PushKit callback, as Apple
+// requires. Lazy + idempotent so it also works from the FCM background
+// handler where the app UI never mounted.
+let _callKeep = null;
+let _callKeepSetup = false;
+function loadCallKeep() {
+    if ( Platform.OS !== 'android' ) return null;
+    if ( _callKeep ) return _callKeep;
+    try {
+        const mod = require( '@telecmi/react-native-callkeep' );
+        _callKeep = mod && ( mod.default || mod );
+    } catch {
+        dbg( 'callkeep not available — no native ring on Android' );
+        return null;
+    }
+    if ( _callKeep && !_callKeepSetup ) {
+        _callKeepSetup = true;
+        try {
+            _callKeep.setup( {
+                ios: { appName: 'Connle' },
+                android: {
+                    alertTitle: 'Permissions required',
+                    alertDescription: 'This application needs phone-account access to show incoming calls',
+                    cancelButton: 'Cancel',
+                    okButton: 'OK',
+                    additionalPermissions: [],
+                    foregroundService: {
+                        channelId: 'com.telecmi.connle.video',
+                        channelName: 'Incoming video calls',
+                        notificationTitle: 'Connle call in progress',
+                    },
+                },
+            } );
+        } catch ( e ) {
+            dbg( 'callkeep setup failed —', e && e.message );
+        }
+    }
+    return _callKeep;
+}
+
 const DEFAULT_API_BASE = 'http://192.168.0.211:6001';
 const DEFAULT_REGISTER_PATH = '/video/push/register';
 const DEFAULT_UNREGISTER_PATH = '/video/push/unregister';
@@ -343,8 +385,29 @@ export default class ConnlePush {
         }
         try {
             if ( data.type === 'video_cancel' ) {
+                // Dismiss the native Android ring for this exact call.
+                const ck = loadCallKeep();
+                if ( ck && data.call_id ) {
+                    try { ck.reportEndCallWithUUID( String( data.call_id ), 2 ); } catch { /* ignore */ }
+                }
                 if ( typeof this.connle._onPushCancel === 'function' ) this.connle._onPushCancel( data );
                 return;
+            }
+            // Android: ring the native ConnectionService UI — works in every
+            // app state, including the background handler. (iOS rings from the
+            // AppDelegate's CallKit report; JS only mirrors state there.)
+            if ( Platform.OS === 'android' && data.call_id ) {
+                const ck = loadCallKeep();
+                if ( ck ) {
+                    const hasVideo = !!( data.media && typeof data.media === 'object' && data.media.video );
+                    const caller = data.from_name || data.from || 'Incoming call';
+                    try {
+                        ck.displayIncomingCall( String( data.call_id ), String( data.from || 'unknown' ), caller, 'generic', hasVideo );
+                        dbg( 'native Android ring for', data.call_id );
+                    } catch ( e ) {
+                        dbg( 'displayIncomingCall failed —', e && e.message );
+                    }
+                }
             }
             // video_call: surface through the SDK's normal incoming-call path
             // with transport marked, so app UIs work unchanged.
