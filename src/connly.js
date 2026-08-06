@@ -33,6 +33,9 @@ export default class ConnlySignalling extends EventEmitter {
         this.outboundCallInFlight = false;
         this.outboundCancelRequested = false;
         this.pendingIncomingCall = null;
+        // The server sends every incoming call over BOTH the socket (web) and
+        // push (mobile) — a foregrounded device receives it twice. Ring once.
+        this._seenIncomingIds = [];
     }
 
     // Initialize a new connection
@@ -103,8 +106,12 @@ export default class ConnlySignalling extends EventEmitter {
 
 
         this.socket.on('connle_on_incoming_call', (data, callback) => {
-            this.prepareIncomingCall(data);
-            const delivered = this.deliverIncomingCall(data);
+            const duplicate = this._alreadyRinging(data?.call_id);
+            let delivered = true;
+            if (!duplicate) {
+                this.prepareIncomingCall(data);
+                delivered = this.deliverIncomingCall(data);
+            }
 
             if (typeof callback === 'function') {
                 callback({
@@ -264,11 +271,25 @@ export default class ConnlySignalling extends EventEmitter {
     // app UIs work unchanged (payload has transport:'push').
     _onPushIncoming(data) {
         try {
+            if (this._alreadyRinging(data?.call_id)) return;
+            // The push payload is self-sufficient (call_id, room, token) —
+            // prepare so answer() works even when the app was launched cold.
+            this.prepareIncomingCall(data);
             if (typeof this.onIncomingCallCallback === 'function') this.onIncomingCallCallback(data);
             this.emit('incomingCall', data);
         } catch (error) {
             this.emitError({ code: 'PUSH_INCOMING_FAILED', message: error?.message || 'push_incoming_failed' });
         }
+    }
+
+    // True when this call_id already rang on this device (socket + push race);
+    // records it otherwise. Keeps the last 20 ids.
+    _alreadyRinging(call_id) {
+        if (!call_id) return false;
+        if (this._seenIncomingIds.includes(call_id)) return true;
+        this._seenIncomingIds.push(call_id);
+        if (this._seenIncomingIds.length > 20) this._seenIncomingIds.shift();
+        return false;
     }
 
     // The caller cancelled while this device was ringing (push-delivered).
