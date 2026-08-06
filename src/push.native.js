@@ -87,21 +87,32 @@ function loadMessaging() {
         const ns = mod && ( mod.default || mod );
         if ( typeof ns === 'function' ) {
             const m = ns();
+            const nguard = ( name, fn ) => ( ...args ) => {
+                try { return fn( ...args ); }
+                catch ( e ) { dbg( name + ' failed (is Firebase configured? google-services.json?) —', e && e.message ); return Promise.reject( e ); }
+            };
             return {
-                getToken: () => m.getToken(),
-                onTokenRefresh: ( cb ) => m.onTokenRefresh( cb ),
-                onMessage: ( cb ) => m.onMessage( cb ),
-                setBackgroundMessageHandler: ( cb ) => m.setBackgroundMessageHandler( cb ),
+                getToken: nguard( 'getToken', () => m.getToken() ),
+                onTokenRefresh: nguard( 'onTokenRefresh', ( cb ) => m.onTokenRefresh( cb ) ),
+                onMessage: nguard( 'onMessage', ( cb ) => m.onMessage( cb ) ),
+                setBackgroundMessageHandler: nguard( 'setBackgroundMessageHandler', ( cb ) => m.setBackgroundMessageHandler( cb ) ),
             };
         }
         const { getMessaging, getToken, onTokenRefresh, onMessage, setBackgroundMessageHandler } = mod;
         if ( typeof getMessaging !== 'function' ) return null;
         const m = getMessaging();
+        // Each call guarded: with Firebase half-configured (no
+        // google-services.json, native module version mismatch) the modular
+        // fns throw synchronously from INSIDE — that must never crash the app.
+        const guard = ( name, fn ) => ( ...args ) => {
+            try { return fn( ...args ); }
+            catch ( e ) { dbg( name + ' failed (is Firebase configured? google-services.json?) —', e && e.message ); return Promise.reject( e ); }
+        };
         return {
-            getToken: () => getToken( m ),
-            onTokenRefresh: ( cb ) => onTokenRefresh( m, cb ),
-            onMessage: ( cb ) => onMessage( m, cb ),
-            setBackgroundMessageHandler: ( cb ) => setBackgroundMessageHandler( m, cb ),
+            getToken: guard( 'getToken', () => getToken( m ) ),
+            onTokenRefresh: guard( 'onTokenRefresh', ( cb ) => onTokenRefresh( m, cb ) ),
+            onMessage: guard( 'onMessage', ( cb ) => onMessage( m, cb ) ),
+            setBackgroundMessageHandler: guard( 'setBackgroundMessageHandler', ( cb ) => setBackgroundMessageHandler( m, cb ) ),
         };
     } catch ( e ) {
         dbg( 'firebase messaging init failed —', e && e.message );
@@ -121,7 +132,8 @@ function loadVoipPush() {
     }
 }
 
-const DEFAULT_API_BASE = 'https://api.connle.com';
+// LOCAL TEST — revert to https://api.connle.com before publishing.
+const DEFAULT_API_BASE = 'http://192.168.0.211:6001';
 const DEFAULT_REGISTER_PATH = '/video/push/register';
 const DEFAULT_UNREGISTER_PATH = '/video/push/unregister';
 
@@ -165,6 +177,14 @@ export default class ConnlePush {
 
     // Nobody else fetched a token — this SDK is alone: own the OS APIs.
     _claimAlone( router ) {
+        try {
+            this._claimAloneInner( router );
+        } catch ( e ) {
+            dbg( 'push claim failed — push disabled for this run:', e && e.message );
+        }
+    }
+
+    _claimAloneInner( router ) {
         if ( Platform.OS === 'android' ) {
             const messaging = loadMessaging();
             if ( !messaging ) return;
