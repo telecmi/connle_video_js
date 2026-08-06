@@ -443,12 +443,31 @@ export default function App(): React.JSX.Element {
 
   const onConnect = useCallback(() => connectWith(email, password), [connectWith, email, password]);
 
+  // Sign-out order matters: unregister the push token FIRST (needs the live
+  // session), then drop the socket. Otherwise this device keeps ringing for
+  // calls after logout.
   const onDisconnect = useCallback(() => {
-    connleRef.current?.disconnect();
-    setConnected(false);
-    resetCall();
-    setStatus('Disconnected');
-  }, [resetCall]);
+    const c = connleRef.current;
+    const finish = () => {
+      c?.disconnect();
+      setConnected(false);
+      resetCall();
+      setStatus('Disconnected');
+    };
+    if (c?.unregisterPush) {
+      log('unregistering push token…');
+      let done = false;
+      const once = (r: any) => {
+        if (done) return; done = true;
+        log(`unregister result: ${safeStringify(r)}`);
+        finish();
+      };
+      c.unregisterPush(once);
+      setTimeout(() => once({code: 408, note: 'timeout'}), 4000);
+    } else {
+      finish();
+    }
+  }, [resetCall, log]);
 
   const onCall = useCallback(async () => {
     if (!targetUser.trim()) {

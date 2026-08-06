@@ -12,6 +12,9 @@ declare module 'connle-video-sdk' {
   }
 
   export default class ConnleVideo {
+    /** Remove this device's video push registration (call before sign-out). */
+    unregisterPush(callback?: (result: any) => void): void;
+
     constructor(
       serverUrl: string,
       token: string,
