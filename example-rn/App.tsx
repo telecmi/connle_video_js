@@ -382,6 +382,7 @@ export default function App(): React.JSX.Element {
         const inc = incomingRef.current;
         if (inc) connleRef.current?.reject(() => {});
         else connleRef.current?.hangup(() => {});
+        resetCallRef.current?.();
       }
     });
 
@@ -473,6 +474,8 @@ export default function App(): React.JSX.Element {
   useEffect(() => { connectWithRef.current = connectWith; }, [connectWith]);
   const connectedRef = useRef(false);
   useEffect(() => { connectedRef.current = connected; }, [connected]);
+  const resetCallRef = useRef<(() => void) | null>(null);
+  useEffect(() => { resetCallRef.current = resetCall; }, [resetCall]);
   useEffect(() => { connectWithStoredRef.current = connectWithStored; }, [connectWithStored]);
 
   const onConnect = useCallback(() => connectWith(email, password), [connectWith, email, password]);
@@ -534,11 +537,25 @@ export default function App(): React.JSX.Element {
       Alert.alert('Permission needed', 'Camera / microphone permission required.');
       return;
     }
+    // Route the answer THROUGH CallKit when it is showing this call — the
+    // native screen goes active and its answerCall event does the SDK answer.
+    // Direct SDK answer only when there is no native call (web-style socket
+    // fallback on push-less devices).
+    if (RNCallKeep && callkitUuidRef.current) {
+      log(`answer via CallKit (${callkitUuidRef.current})`);
+      RNCallKeep.answerIncomingCall(callkitUuidRef.current);
+      return;
+    }
     log('answer()');
     connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
   }, [incoming, log]);
 
   const onReject = useCallback(() => {
+    if (RNCallKeep && callkitUuidRef.current) {
+      log(`reject via CallKit (${callkitUuidRef.current})`);
+      RNCallKeep.endCall(callkitUuidRef.current);  // fires endCall → SDK reject + reset
+      return;
+    }
     connleRef.current?.reject((ack: any) => log(`reject ack: ${safeStringify(ack)}`));
     resetCall();
     endNativeCall();
