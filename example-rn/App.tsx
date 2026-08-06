@@ -28,6 +28,7 @@ import {
   View,
 } from 'react-native';
 import {MediaStream as RNMediaStream, RTCView} from '@livekit/react-native-webrtc';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ConnleVideo from 'connle-video-sdk';
 
 type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
@@ -138,6 +139,17 @@ export default function App(): React.JSX.Element {
   const [email,      setEmail]      = useState('');
   const [password,   setPassword]   = useState('');
   const [mediaUrl,   setMediaUrl]   = useState(DEFAULT_MEDIA);
+
+  // Remember the last-used login so it survives app restarts (test app only —
+  // a real app should keep credentials in the platform keychain, not storage).
+  useEffect(() => {
+    AsyncStorage.getItem('example.email')
+      .then((v: string | null) => { if (v) setEmail(v); })
+      .catch(() => {});
+    AsyncStorage.getItem('example.password')
+      .then((v: string | null) => { if (v) setPassword(v); })
+      .catch(() => {});
+  }, []);
   const [targetUser, setTargetUser] = useState('');
   const [wantVideo,  setWantVideo]  = useState(true);
 
@@ -302,6 +314,8 @@ export default function App(): React.JSX.Element {
       }
       sdkToken = data.token;
       log('login OK — token received');
+      AsyncStorage.setItem('example.email', email.trim()).catch(() => {});
+      AsyncStorage.setItem('example.password', password).catch(() => {});
     } catch (e: any) {
       setStatus(`Login error: ${e?.message ?? e}`);
       log(`login error: ${e?.message ?? e}`);
