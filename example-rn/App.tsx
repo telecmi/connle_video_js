@@ -198,6 +198,16 @@ export default function App(): React.JSX.Element {
     setLogs(prev => [`${ts}  ${line}`, ...prev].slice(0, 200));
   }, []);
 
+  // Route the SDK's internal diagnostics ([push] token/register lines) into
+  // the on-screen event log too — debuggable straight on the device.
+  useEffect(() => {
+    (globalThis as any).__connleLog = (line: string) => {
+      console.log('[connle-video]', line);
+      const ts = new Date().toLocaleTimeString();
+      setLogs(prev => [`${ts}  ${line}`, ...prev].slice(0, 200));
+    };
+  }, []);
+
   const resetCall = useCallback(() => {
     setCallState('idle');
     setIncoming(null);
