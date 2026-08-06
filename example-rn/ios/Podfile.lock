@@ -1604,6 +1604,10 @@ PODS:
     - React-logger
     - React-perflogger
     - React-utils (= 0.76.9)
+  - RNCallKeep (4.3.17):
+    - React
+  - RNVoipPushNotification (3.3.3):
+    - React-Core
   - SocketRocket (0.7.1)
   - WebRTC-SDK (125.6422.07)
   - Yoga (0.0.0)
@@ -1677,6 +1681,8 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
+  - "RNCallKeep (from `../node_modules/@telecmi/react-native-callkeep`)"
+  - RNVoipPushNotification (from `../node_modules/react-native-voip-push-notification`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1818,6 +1824,10 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
+  RNCallKeep:
+    :path: "../node_modules/@telecmi/react-native-callkeep"
+  RNVoipPushNotification:
+    :path: "../node_modules/react-native-voip-push-notification"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -1888,6 +1898,8 @@ SPEC CHECKSUMS:
   React-utils: ed818f19ab445000d6b5c4efa9d462449326cc9f
   ReactCodegen: f853a20cc9125c5521c8766b4b49375fec20648b
   ReactCommon: 300d8d9c5cb1a6cd79a67cf5d8f91e4d477195f9
+  RNCallKeep: bbbeb9e804046c7304e7f4070f5f7404b52f5ba2
+  RNVoipPushNotification: 4998fe6724d421da616dca765da7dc421ff54c4e
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   WebRTC-SDK: dff00a3892bc570b6014e046297782084071657e
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a

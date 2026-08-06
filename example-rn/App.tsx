@@ -29,6 +29,9 @@ import {
 } from 'react-native';
 import {MediaStream as RNMediaStream, RTCView} from '@livekit/react-native-webrtc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// The fork's bundled index.d.ts is not a proper module — treat as untyped.
+// @ts-ignore
+import RNCallKeep from '@telecmi/react-native-callkeep';
 import ConnleVideo from 'connle-video-sdk';
 
 type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
@@ -140,14 +143,30 @@ export default function App(): React.JSX.Element {
   const [password,   setPassword]   = useState('');
   const [mediaUrl,   setMediaUrl]   = useState(DEFAULT_MEDIA);
 
+  // CallKit bookkeeping: uuid of the call currently shown by CallKit (equals
+  // the server call_id), and an Answer tap that arrived before the SDK had the
+  // incoming call (push-launched app still logging in).
+  const callkitUuidRef = useRef<string | null>(null);
+  const pendingAnswerRef = useRef<string | null>(null);
+  const autoLoginTriedRef = useRef(false);
+
   // Remember the last-used login so it survives app restarts (test app only —
   // a real app should keep credentials in the platform keychain, not storage).
+  // When both values exist, log in automatically — a VoIP push that launches
+  // the killed app must reach 'connected' without anyone typing.
   useEffect(() => {
-    AsyncStorage.getItem('example.email')
-      .then((v: string | null) => { if (v) setEmail(v); })
-      .catch(() => {});
-    AsyncStorage.getItem('example.password')
-      .then((v: string | null) => { if (v) setPassword(v); })
+    Promise.all([
+      AsyncStorage.getItem('example.email'),
+      AsyncStorage.getItem('example.password'),
+    ])
+      .then(([e, pw]: Array<string | null>) => {
+        if (e) setEmail(e);
+        if (pw) setPassword(pw);
+        if (e && pw && !autoLoginTriedRef.current) {
+          autoLoginTriedRef.current = true;
+          connectWithRef.current?.(e, pw);
+        }
+      })
       .catch(() => {});
   }, []);
   const [targetUser, setTargetUser] = useState('');
@@ -163,6 +182,9 @@ export default function App(): React.JSX.Element {
   const [cameraOff,  setCameraOff]  = useState(false);
   const [speakerOn,  setSpeakerOn]  = useState(false);
   const [callHasVideo, setCallHasVideo] = useState(false);
+
+  const incomingRef = useRef<any>(null);
+  useEffect(() => { incomingRef.current = incoming; }, [incoming]);
 
   // Track objects for RTCView rendering (livekit-client Track, not raw MediaStreamTrack)
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<any>(null);
@@ -214,6 +236,16 @@ export default function App(): React.JSX.Element {
       setCallHasVideo(hasVideo);
       setStatus(`Incoming ${hasVideo ? 'video' : 'audio'} call from ${from}`);
       log(`onIncomingCall: ${safeStringify(d)}`);
+      // Push-delivered calls ring natively via CallKit (call_id == uuid).
+      const cid = String(d?.call_id ?? '').toLowerCase();
+      if (cid) callkitUuidRef.current = cid;
+      // The user already tapped Answer on the CallKit screen while we were
+      // still logging in / connecting — complete the answer now.
+      if (cid && pendingAnswerRef.current === cid) {
+        pendingAnswerRef.current = null;
+        log('completing CallKit answer that arrived before the SDK was ready');
+        connleai.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
+      }
     });
 
     connleai.onAnswered((d: any) => {
@@ -225,6 +257,11 @@ export default function App(): React.JSX.Element {
       resetCall();
       setStatus('Connected — ready for calls');
       log(`onEnded: ${safeStringify(d)}`);
+      // Dismiss the CallKit call (report, not request — no endCall event loop).
+      if (callkitUuidRef.current) {
+        RNCallKeep.reportEndCallWithUUID(callkitUuidRef.current, 2);
+        callkitUuidRef.current = null;
+      }
     });
 
     // ---- Media room (LiveKit) ----
@@ -232,6 +269,7 @@ export default function App(): React.JSX.Element {
       setCallState('active');
       setStatus('In call');
       log(`media connected: ${d?.user_id ?? ''}`);
+      if (callkitUuidRef.current) RNCallKeep.setCurrentCallActive(callkitUuidRef.current);
     });
     connleai.on('disconnected', (d: any) => {
       resetCall();
@@ -278,21 +316,63 @@ export default function App(): React.JSX.Element {
     });
   }, [log, resetCall]);
 
+  // CallKit events — Answer/End tapped on the native (lock-screen) call UI.
+  // The CallKit uuid IS the server call_id (set in the AppDelegate), so we can
+  // match it against the SDK's incoming call.
   useEffect(() => {
+    RNCallKeep.setup({
+      ios: {appName: 'ConnleVideoExample', supportsVideo: true},
+      android: {
+        alertTitle: 'Permissions required',
+        alertDescription: 'This app needs phone-account access for calls',
+        cancelButton: 'Cancel',
+        okButton: 'OK',
+        additionalPermissions: [],
+      },
+    }).catch(() => {});
+
+    RNCallKeep.addEventListener('answerCall', ({callUUID}: {callUUID: string}) => {
+      const uuid = String(callUUID).toLowerCase();
+      log(`CallKit answer: ${uuid}`);
+      callkitUuidRef.current = uuid;
+      const inc = incomingRef.current;
+      if (inc && String(inc.call_id ?? '').toLowerCase() === uuid) {
+        connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
+      } else {
+        // SDK not ready yet (push launched the killed app) — finish on arrival.
+        pendingAnswerRef.current = uuid;
+      }
+    });
+
+    RNCallKeep.addEventListener('endCall', ({callUUID}: {callUUID: string}) => {
+      const uuid = String(callUUID).toLowerCase();
+      log(`CallKit end: ${uuid}`);
+      if (callkitUuidRef.current === uuid || pendingAnswerRef.current === uuid) {
+        pendingAnswerRef.current = null;
+        callkitUuidRef.current = null;
+        const inc = incomingRef.current;
+        if (inc) connleRef.current?.reject(() => {});
+        else connleRef.current?.hangup(() => {});
+      }
+    });
+
     return () => {
+      RNCallKeep.removeEventListener('answerCall');
+      RNCallKeep.removeEventListener('endCall');
       try {
         connleRef.current?.hangup();
         connleRef.current?.disconnect();
         connleRef.current?.removeAllListeners();
       } catch {}
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---- Handlers ----
   // Login via connly_rest (email+password → token), then connect the SDK with
   // that token — the same token also authorizes the push registration.
-  const onConnect = useCallback(async () => {
-    if (!serverUrl.trim() || !email.trim() || !password.trim()) {
+  const connectWith = useCallback(async (emailV: string, passwordV: string) => {
+    if (!serverUrl.trim() || !emailV.trim() || !passwordV.trim()) {
       Alert.alert('Missing info', 'Enter the signalling URL, email and password.');
       return;
     }
@@ -300,11 +380,11 @@ export default function App(): React.JSX.Element {
     let sdkToken: string;
     try {
       setStatus('Logging in…');
-      log(`POST ${REST_BASE}/agent/login (${email.trim()})`);
+      log(`POST ${REST_BASE}/agent/login (${emailV.trim()})`);
       const resp = await fetch(`${REST_BASE}/agent/login`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email_id: email.trim(), password}),
+        body: JSON.stringify({email_id: emailV.trim(), password: passwordV}),
       });
       const data = await resp.json();
       if (data?.code !== 200 || !data?.token) {
@@ -314,8 +394,8 @@ export default function App(): React.JSX.Element {
       }
       sdkToken = data.token;
       log('login OK — token received');
-      AsyncStorage.setItem('example.email', email.trim()).catch(() => {});
-      AsyncStorage.setItem('example.password', password).catch(() => {});
+      AsyncStorage.setItem('example.email', emailV.trim()).catch(() => {});
+      AsyncStorage.setItem('example.password', passwordV).catch(() => {});
     } catch (e: any) {
       setStatus(`Login error: ${e?.message ?? e}`);
       log(`login error: ${e?.message ?? e}`);
@@ -336,7 +416,12 @@ export default function App(): React.JSX.Element {
     wireEvents(connleai);
     setStatus('Connecting…');
     connleai.connect();
-  }, [serverUrl, email, password, mediaUrl, wireEvents, log]);
+  }, [serverUrl, mediaUrl, wireEvents, log]);
+
+  const connectWithRef = useRef<typeof connectWith | null>(null);
+  useEffect(() => { connectWithRef.current = connectWith; }, [connectWith]);
+
+  const onConnect = useCallback(() => connectWith(email, password), [connectWith, email, password]);
 
   const onDisconnect = useCallback(() => {
     connleRef.current?.disconnect();
