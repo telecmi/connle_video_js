@@ -236,6 +236,10 @@ export default class ConnlePush {
 
     _onDeviceToken( info ) {
         if ( !info || !info.token ) return;
+        // Loud, greppable proof the OS issued a push token (the #1 thing to
+        // verify on a new device/provisioning setup).
+        dbg( 'device push token (' + info.provider + '/' + info.platform + '): ' + info.token );
+        try { console.log( '[connle-video] device push token (' + info.provider + '):', info.token ); } catch { /* ignore */ }
         this.deviceToken = info;
         if ( this.registered === info.token ) return;
         // Send only while CONNECTED — connect succeeding proves the session
