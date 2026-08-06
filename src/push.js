@@ -3,5 +3,6 @@ export default class ConnlePush {
     constructor() { }
     start() { return false; }
     onConnected() { }
+    suppressSocketIncoming() { return false; }
     unregister( callback ) { if ( typeof callback === 'function' ) callback( { code: 200, status: 'no push on web' } ); }
 }

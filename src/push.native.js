@@ -252,6 +252,15 @@ export default class ConnlePush {
         }
     }
 
+    /** On mobile the push IS the incoming-call transport (native CallKit /
+     *  ConnectionService ring); the socket incoming event is for browsers.
+     *  Once this device holds a push token, socket-delivered invites are
+     *  suppressed so the app rings exactly once, natively. Without a token
+     *  (Firebase not set up, iOS simulator) the socket fallback still rings. */
+    suppressSocketIncoming() {
+        return !!( this.deviceToken && this.deviceToken.token );
+    }
+
     /** Called by the SDK on every successful connect: register (or re-register)
      *  the held device token. Idempotent — an already-sent token is skipped. */
     onConnected() {

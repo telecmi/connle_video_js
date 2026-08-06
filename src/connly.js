@@ -106,9 +106,14 @@ export default class ConnlySignalling extends EventEmitter {
 
 
         this.socket.on('connle_on_incoming_call', (data, callback) => {
-            const duplicate = this._alreadyRinging(data?.call_id);
+            // Mobile with an active push token: the push is the ring (native
+            // call UI) — the socket invite is ack'd but does not surface.
+            // Web (and push-less native apps): socket rings as always.
+            const suppressed = this._push && typeof this._push.suppressSocketIncoming === 'function'
+                && this._push.suppressSocketIncoming();
+            const duplicate = !suppressed && this._alreadyRinging(data?.call_id);
             let delivered = true;
-            if (!duplicate) {
+            if (!suppressed && !duplicate) {
                 this.prepareIncomingCall(data);
                 delivered = this.deliverIncomingCall(data);
             }
