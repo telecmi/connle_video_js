@@ -264,6 +264,7 @@ export default class ConnlePush {
     /** Called by the SDK on every successful connect: register (or re-register)
      *  the held device token. Idempotent — an already-sent token is skipped. */
     onConnected() {
+        this.signedOut = false; // a fresh session accepts calls again
         if ( this.deviceToken && this.registered !== this.deviceToken.token ) {
             this._register( this.deviceToken );
         }
@@ -300,6 +301,10 @@ export default class ConnlePush {
 
     /** Remove this device's video push registration (e.g. on sign-out). */
     unregister( callback ) {
+        // Signed out: refuse incoming video_call pushes from now until the
+        // next successful connect — even if the server-side token removal
+        // fails (network, expired session) or a late push arrives.
+        this.signedOut = true;
         const done = ( r ) => { if ( typeof callback === 'function' ) callback( r ); };
         if ( !this.registered ) return done( { code: 200, status: 'no token registered' } );
         const base = ( this.opts.apiBase || DEFAULT_API_BASE ).replace( /\/+$/, '' );
@@ -313,6 +318,7 @@ export default class ConnlePush {
         xhr.timeout = 5000;
         xhr.onreadystatechange = () => {
             if ( xhr.readyState !== 4 ) return;
+            dbg( 'unregister HTTP ' + xhr.status + ' ' + String( xhr.responseText || '' ).slice( 0, 120 ) );
             if ( xhr.status === 200 ) this.registered = null;
             done( { code: xhr.status } );
         };
@@ -330,6 +336,10 @@ export default class ConnlePush {
         if ( !data.from && data.caller ) data.from = data.caller;
         if ( typeof data.media === 'string' ) {
             try { data.media = JSON.parse( data.media ); } catch { /* keep as-is */ }
+        }
+        if ( this.signedOut && data.type === 'video_call' ) {
+            dbg( 'signed out — incoming video_call push refused' );
+            return;
         }
         try {
             if ( data.type === 'video_cancel' ) {

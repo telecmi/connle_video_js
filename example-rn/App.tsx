@@ -155,6 +155,7 @@ export default function App(): React.JSX.Element {
   const callkitUuidRef = useRef<string | null>(null);
   const pendingAnswerRef = useRef<string | null>(null);
   const autoLoginTriedRef = useRef(false);
+  const connectWithStoredRef = useRef<((t: string, e: string, p: string) => void) | null>(null);
 
   // Remember the last-used login so it survives app restarts (test app only —
   // a real app should keep credentials in the platform keychain, not storage).
@@ -164,14 +165,15 @@ export default function App(): React.JSX.Element {
     Promise.all([
       AsyncStorage.getItem('example.email'),
       AsyncStorage.getItem('example.password'),
+      AsyncStorage.getItem('example.token'),
     ])
-      .then(([e, pw]: Array<string | null>) => {
+      .then(([e, pw, tok]: Array<string | null>) => {
         if (e) setEmail(e);
         if (pw) setPassword(pw);
-        if (e && pw && !autoLoginTriedRef.current) {
-          autoLoginTriedRef.current = true;
-          connectWithRef.current?.(e, pw);
-        }
+        if (autoLoginTriedRef.current) return;
+        autoLoginTriedRef.current = true;
+        if (tok) connectWithStoredRef.current?.(tok, e ?? '', pw ?? '');
+        else if (e && pw) connectWithRef.current?.(e, pw);
       })
       .catch(() => {});
   }, []);
@@ -414,6 +416,7 @@ export default function App(): React.JSX.Element {
       }
       sdkToken = data.token;
       log('login OK — token received');
+      AsyncStorage.setItem('example.token', sdkToken).catch(() => {});
       AsyncStorage.setItem('example.email', emailV.trim()).catch(() => {});
       AsyncStorage.setItem('example.password', passwordV).catch(() => {});
     } catch (e: any) {
@@ -422,6 +425,14 @@ export default function App(): React.JSX.Element {
       return;
     }
 
+    connectSdk(sdkToken);
+  }, [serverUrl, mediaUrl, wireEvents, log]);
+
+  // Sessions are capped server-side (last 5 per user) — logging in on every
+  // app open evicts other devices' sessions and their unregister then 401s.
+  // Reuse the stored session token like a real app; fall back to a fresh
+  // login when it stops working.
+  const connectSdk = useCallback((sdkToken: string) => {
     try {
       connleRef.current?.disconnect();
       connleRef.current?.removeAllListeners();
@@ -436,10 +447,26 @@ export default function App(): React.JSX.Element {
     wireEvents(connleai);
     setStatus('Connecting…');
     connleai.connect();
-  }, [serverUrl, mediaUrl, wireEvents, log]);
+  }, [serverUrl, mediaUrl, wireEvents]);
+
+  const connectWithStored = useCallback((storedToken: string, emailV: string, passwordV: string) => {
+    log('connecting with stored session (no fresh login)');
+    connectSdk(storedToken);
+    // Stored session dead (expired / evicted)? → fresh login after 6s.
+    setTimeout(() => {
+      if (!connectedRef.current && emailV && passwordV) {
+        log('stored session did not connect — logging in fresh');
+        AsyncStorage.removeItem('example.token').catch(() => {});
+        connectWithRef.current?.(emailV, passwordV);
+      }
+    }, 6000);
+  }, [connectSdk, log]);
 
   const connectWithRef = useRef<typeof connectWith | null>(null);
   useEffect(() => { connectWithRef.current = connectWith; }, [connectWith]);
+  const connectedRef = useRef(false);
+  useEffect(() => { connectedRef.current = connected; }, [connected]);
+  useEffect(() => { connectWithStoredRef.current = connectWithStored; }, [connectWithStored]);
 
   const onConnect = useCallback(() => connectWith(email, password), [connectWith, email, password]);
 
@@ -460,6 +487,7 @@ export default function App(): React.JSX.Element {
       const once = (r: any) => {
         if (done) return; done = true;
         log(`unregister result: ${safeStringify(r)}`);
+        AsyncStorage.removeItem('example.token').catch(() => {});
         finish();
       };
       c.unregisterPush(once);
