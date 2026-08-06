@@ -244,7 +244,7 @@ export default function App(): React.JSX.Element {
 
     // ---- Inbound ----
     connleai.onIncomingCall((d: any) => {
-      const from = d?.from ?? d?.userid ?? d?.user_id ?? d?.caller ?? 'Unknown';
+      const from = d?.from_name ?? d?.from ?? d?.userid ?? d?.user_id ?? d?.caller ?? 'Unknown';
       const hasVideo = mediaHasVideo(d?.media);
       setCallState('incoming');
       setIncoming(d);

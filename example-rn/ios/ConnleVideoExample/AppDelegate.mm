@@ -68,6 +68,11 @@ withCompletionHandler:(void (^)(void))completion
       ?: payload.dictionaryPayload[@"uuid"]
       ?: [[NSUUID UUID] UUIDString];
   NSString *caller = payload.dictionaryPayload[@"from"] ?: payload.dictionaryPayload[@"caller"] ?: @"Incoming call";
+  // Human name for the CallKit screen; the handle stays the user_id so
+  // answer/recents keep a stable identity.
+  NSString *fromName = payload.dictionaryPayload[@"from_name"];
+  NSString *callerDisplay = ([fromName isKindOfClass:[NSString class]] && fromName.length > 0)
+      ? fromName : caller;
   BOOL isCancel = [payload.dictionaryPayload[@"type"] isEqual:@"video_cancel"];
   // media rides as a JSON string ({"audio":true,"video":true}); a cheap
   // substring check is enough to pick the right CallKit call style.
@@ -99,7 +104,7 @@ withCompletionHandler:(void (^)(void))completion
                                handle:caller
                            handleType:@"generic"
                              hasVideo:NO
-                  localizedCallerName:caller
+                  localizedCallerName:callerDisplay
                       supportsHolding:YES
                          supportsDTMF:NO
                      supportsGrouping:NO
@@ -115,7 +120,7 @@ withCompletionHandler:(void (^)(void))completion
                                handle:caller
                            handleType:@"generic"
                              hasVideo:hasVideo
-                  localizedCallerName:caller
+                  localizedCallerName:callerDisplay
                       supportsHolding:YES
                          supportsDTMF:NO
                      supportsGrouping:NO
