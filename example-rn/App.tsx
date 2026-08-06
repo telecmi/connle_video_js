@@ -29,9 +29,15 @@ import {
 } from 'react-native';
 import {MediaStream as RNMediaStream, RTCView} from '@livekit/react-native-webrtc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// The fork's bundled index.d.ts is not a proper module — treat as untyped.
-// @ts-ignore
-import RNCallKeep from '@telecmi/react-native-callkeep';
+import {NativeModules} from 'react-native';
+
+// CallKeep: only usable when its NATIVE module is compiled into this binary —
+// a stale build without it must degrade to in-app ringing, not crash.
+// (The fork's index.d.ts is not a proper module, hence the untyped require.)
+const RNCallKeep: any = NativeModules.RNCallKeep
+  ? // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('@telecmi/react-native-callkeep').default
+  : null;
 import ConnleVideo from 'connle-video-sdk';
 
 type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
@@ -269,7 +275,7 @@ export default function App(): React.JSX.Element {
       log(`onEnded: ${safeStringify(d)}`);
       // Dismiss the CallKit call (report, not request — no endCall event loop).
       if (callkitUuidRef.current) {
-        RNCallKeep.reportEndCallWithUUID(callkitUuidRef.current, 2);
+        if (RNCallKeep) RNCallKeep.reportEndCallWithUUID(callkitUuidRef.current, 2);
         callkitUuidRef.current = null;
       }
     });
@@ -279,7 +285,7 @@ export default function App(): React.JSX.Element {
       setCallState('active');
       setStatus('In call');
       log(`media connected: ${d?.user_id ?? ''}`);
-      if (callkitUuidRef.current) RNCallKeep.setCurrentCallActive(callkitUuidRef.current);
+      if (callkitUuidRef.current && RNCallKeep) RNCallKeep.setCurrentCallActive(callkitUuidRef.current);
     });
     connleai.on('disconnected', (d: any) => {
       resetCall();
@@ -330,6 +336,10 @@ export default function App(): React.JSX.Element {
   // The CallKit uuid IS the server call_id (set in the AppDelegate), so we can
   // match it against the SDK's incoming call.
   useEffect(() => {
+    if (!RNCallKeep) {
+      log('RNCallKeep native module missing — REBUILD the app from Xcode (old binary); CallKit disabled, in-app ringing only');
+      return;
+    }
     RNCallKeep.setup({
       ios: {appName: 'ConnleVideoExample', supportsVideo: true},
       android: {
