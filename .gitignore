@@ -3,3 +3,7 @@ lib/
 dist/
 *.tgz
 .DS_Store
+
+# Firebase app config — per-developer, contains project API keys; do not
+# commit to this public repo (copy from your Firebase console / main app).
+example-rn/android/app/google-services.json

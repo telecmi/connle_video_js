@@ -79,7 +79,7 @@ android {
 
     namespace "com.connlevideoexample"
     defaultConfig {
-        applicationId "com.connlevideoexample"
+        applicationId "com.connleai.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

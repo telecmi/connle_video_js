@@ -484,7 +484,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.telecmi.connlyrnexample;
+				PRODUCT_BUNDLE_IDENTIFIER = com.connleai.app;
 				PRODUCT_NAME = ConnleVideoExample;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -512,7 +512,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.telecmi.connlyrnexample;
+				PRODUCT_BUNDLE_IDENTIFIER = com.connleai.app;
 				PRODUCT_NAME = ConnleVideoExample;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
