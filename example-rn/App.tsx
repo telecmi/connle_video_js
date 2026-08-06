@@ -362,6 +362,11 @@ export default function App(): React.JSX.Element {
 
     RNCallKeep.addEventListener('answerCall', ({callUUID}: {callUUID: string}) => {
       const uuid = String(callUUID).toLowerCase();
+      if (answeredFromUiRef.current === uuid) {
+        answeredFromUiRef.current = null;
+        log(`CallKit answer echo for ${uuid} — already answered from UI`);
+        return;
+      }
       log(`CallKit answer: ${uuid}`);
       callkitUuidRef.current = uuid;
       const inc = incomingRef.current;
@@ -476,6 +481,9 @@ export default function App(): React.JSX.Element {
   useEffect(() => { connectedRef.current = connected; }, [connected]);
   const resetCallRef = useRef<(() => void) | null>(null);
   useEffect(() => { resetCallRef.current = resetCall; }, [resetCall]);
+  // uuid we already answered from the app UI — its CallKit answerCall echo
+  // must not answer the SDK a second time.
+  const answeredFromUiRef = useRef<string | null>(null);
   useEffect(() => { connectWithStoredRef.current = connectWithStored; }, [connectWithStored]);
 
   const onConnect = useCallback(() => connectWith(email, password), [connectWith, email, password]);
@@ -537,28 +545,21 @@ export default function App(): React.JSX.Element {
       Alert.alert('Permission needed', 'Camera / microphone permission required.');
       return;
     }
-    // Route the answer THROUGH CallKit when it is showing this call — the
-    // native screen goes active and its answerCall event does the SDK answer.
-    // Direct SDK answer only when there is no native call (web-style socket
-    // fallback on push-less devices).
-    if (RNCallKeep && callkitUuidRef.current) {
-      log(`answer via CallKit (${callkitUuidRef.current})`);
-      RNCallKeep.answerIncomingCall(callkitUuidRef.current);
-      return;
-    }
+    // Answer the SDK directly — the call must connect even if the native UI
+    // sync fails. Then flip the CallKit screen to active (its answerCall echo
+    // is swallowed by the guard above).
     log('answer()');
+    if (RNCallKeep && callkitUuidRef.current) {
+      answeredFromUiRef.current = callkitUuidRef.current;
+      try { RNCallKeep.answerIncomingCall(callkitUuidRef.current); } catch {}
+    }
     connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
   }, [incoming, log]);
 
   const onReject = useCallback(() => {
-    if (RNCallKeep && callkitUuidRef.current) {
-      log(`reject via CallKit (${callkitUuidRef.current})`);
-      RNCallKeep.endCall(callkitUuidRef.current);  // fires endCall → SDK reject + reset
-      return;
-    }
     connleRef.current?.reject((ack: any) => log(`reject ack: ${safeStringify(ack)}`));
     resetCall();
-    endNativeCall();
+    endNativeCall();  // report — dismisses the native ring, no event round-trip
   }, [log, resetCall, endNativeCall]);
 
   const onHangup = useCallback(() => {
