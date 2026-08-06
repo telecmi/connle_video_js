@@ -22,7 +22,11 @@ audio & video calls.
 ## 1. Install the SDK and its native peers
 
 ```bash
-npm install @telecmi/connle-video @livekit/react-native@2.8.0 @livekit/react-native-webrtc@^125.0.12
+npm install @telecmi/connle-video
+
+# Android push wake-ups additionally need Firebase Messaging (installed
+# explicitly in YOUR app — see the push section below):
+npm install @react-native-firebase/app @react-native-firebase/messaging
 ```
 
 | Package | Why it's needed |
@@ -34,7 +38,23 @@ npm install @telecmi/connle-video @livekit/react-native@2.8.0 @livekit/react-nat
 > [!IMPORTANT]
 > Pin these versions — they are the line compatible with the SDK's
 > `livekit-client` (`2.11.x`). Install all three in **your own app's root**.
-> Android autolinking picks up the native modules automatically.
+> The call-related native modules ship **nested** inside the SDK — list them
+> in `react-native.config.js` at your app root so autolinking finds them
+> (autolinking only scans your app's direct dependencies):
+>
+> ```js
+> module.exports = {
+>   dependencies: {
+>     '@livekit/react-native': {},
+>     '@livekit/react-native-webrtc': {},
+>     '@telecmi/react-native-callkeep': {},
+>     'react-native-voip-push-notification': {},
+>     // Firebase is Android-only (iOS uses VoIP push):
+>     '@react-native-firebase/app': {platforms: {ios: null}},
+>     '@react-native-firebase/messaging': {platforms: {ios: null}},
+>   },
+> };
+> ```
 
 ---
 
@@ -168,14 +188,26 @@ connle.switchCamera();      // flip front / back
 
 ---
 
-## Inbound calls while backgrounded (important)
+## Inbound calls — FCM push (required)
 
-Calls ring and connect while the app is in the **foreground**. Receiving a call
-while the app is **backgrounded or killed** requires a high-priority **FCM push**
-+ a **foreground service** (and a native call UI) — that integration is **not**
-part of this SDK; add it on top for an always-on experience.
+On mobile, **incoming calls arrive via push only** (the socket invite is for
+browsers). Android setup:
 
----
+1. **Install Firebase** (step 1 above) and register your `applicationId` in the
+   Firebase console; drop the downloaded `google-services.json` into
+   `android/app/`.
+2. **Gradle wiring** — in `android/build.gradle`:
+   `classpath("com.google.gms:google-services:4.4.2")`, and at the END of
+   `android/app/build.gradle`: `apply plugin: 'com.google.gms.google-services'`.
+3. That's it for the SDK: the FCM token is fetched and registered with TeleCMI
+   automatically on every successful `connect()`; `video_call` /
+   `video_cancel` pushes are received and routed in every app state (the SDK
+   registers its own background handler). Remove the registration with
+   `connle.unregisterPush(cb)` **before sign-out**.
+
+Coexistence: if `@telecmi/piopiy-native` (voice) is installed in the same app,
+both SDKs share one FCM token and one background handler via the TeleCMI push
+router — payloads route by `type`, nothing extra to configure.
 
 ## Troubleshooting
 

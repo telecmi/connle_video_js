@@ -20,24 +20,37 @@ audio & video calls.
 
 ---
 
-## 1. Install the SDK and its native peers
+## 1. Install the SDK
+
+One package — everything call-related (LiveKit WebRTC engine, CallKit
+support, VoIP push) ships **with** the SDK, same model as
+`@telecmi/piopiy-native`:
 
 ```bash
-npm install @telecmi/connle-video @livekit/react-native@2.8.0 @livekit/react-native-webrtc@^125.0.12
+npm install @telecmi/connle-video
 ```
 
-| Package | Why it's needed |
-| :--- | :--- |
-| `@telecmi/connle-video` | The Connle SDK (signalling + call control). |
-| `@livekit/react-native` | LiveKit RN bindings: `registerGlobals()` + audio session. **Required.** |
-| `@livekit/react-native-webrtc` | The native WebRTC implementation. **Required.** |
+Because those native modules arrive *nested* under the SDK, tell React
+Native's autolinking where they live. Create (or extend)
+`react-native.config.js` in your app root:
+
+```js
+module.exports = {
+  dependencies: {
+    // Bundled with @telecmi/connle-video — autolinking only scans your app's
+    // DIRECT dependencies, so list them here or calls will not work.
+    '@livekit/react-native': {},
+    '@livekit/react-native-webrtc': {},
+    '@telecmi/react-native-callkeep': {},
+    'react-native-voip-push-notification': {},
+  },
+};
+```
 
 > [!IMPORTANT]
-> Pin these versions — they are the line compatible with the SDK's
-> `livekit-client` (`2.11.x`). Newer `@livekit/react-native` (≥ 2.9) requires a
-> newer `livekit-client` **and** a newer LiveKit server. Install all three in
-> **your own app's root** (not nested inside another package). Importing
-> `@telecmi/connle-video` automatically injects the WebRTC globals.
+> Do **not** also install `react-native-callkeep` (upstream) or your own copies
+> of the LiveKit packages — duplicates collide at the native level. If your app
+> already carries any of them as direct dependencies, remove them.
 
 ---
 
@@ -217,14 +230,49 @@ connle.switchCamera();      // flip front / back
 
 ---
 
-## Inbound calls while backgrounded (important)
+## Inbound calls — VoIP push + CallKit (required)
 
-Calls ring and connect while the app is in the **foreground**. Receiving a call
-while the app is **backgrounded or killed** requires **VoIP Push (PushKit) +
-CallKit** on iOS — that integration is **not** part of this SDK; add it on top
-for an always-on experience.
+On mobile, **incoming calls arrive via VoIP push only** (the socket is for
+browsers). The push wakes your app in any state — foreground, background, or
+killed — and rings the native CallKit screen. Three one-time steps:
 
----
+### a. Background modes + entitlement
+
+`Info.plist`:
+
+```xml
+<key>UIBackgroundModes</key>
+<array>
+  <string>audio</string>
+  <string>voip</string>
+  <string>remote-notification</string>
+</array>
+```
+
+Add a `.entitlements` file with `aps-environment` (Xcode → Signing &
+Capabilities → **+ Capability → Push Notifications** does this for you), and
+make sure it is set for **both Debug and Release** configurations.
+
+### b. AppDelegate wiring
+
+iOS 13+ requires reporting a CallKit call synchronously inside the PushKit
+callback. Copy the complete `AppDelegate.mm` from the example app
+([example-rn/ios/ConnleVideoExample/AppDelegate.mm](example-rn/ios/ConnleVideoExample/AppDelegate.mm))
+— it handles: PushKit registration, token forwarding (the SDK registers it
+with TeleCMI automatically), CallKit report with the caller's name
+(`from_name`), `video_cancel` dismissing the ringing call, and a native
+ring-timeout backstop.
+
+### c. Answer/End from the CallKit screen
+
+The CallKit uuid **is** the server `call_id` — match them in your
+`answerCall`/`endCall` listeners and call `connle.answer()` / `reject()`.
+See the example's App.tsx for the complete pattern, including answering a
+call that launched the app from killed state.
+
+The device token registers automatically on every successful `connect()` and
+is removed by `connle.unregisterPush(cb)` — **call that before sign-out**, or
+the device keeps ringing for the signed-out user.
 
 ## Troubleshooting
 

@@ -49,20 +49,15 @@
     "webpack-dev-server": "^5.1.0"
   },
   "dependencies": {
-    "livekit-client": "2.11.2",
-    "socket.io-client": "^4.8.0"
+    "livekit-client": "^2.15.0",
+    "socket.io-client": "^4.8.0",
+    "@livekit/react-native": "~2.8.0",
+    "@livekit/react-native-webrtc": "~125.0.12",
+    "@telecmi/react-native-callkeep": "4.3.17",
+    "react-native-voip-push-notification": "^3.3.3"
   },
   "peerDependencies": {
-    "@livekit/react-native": "~2.8.0",
-    "@livekit/react-native-webrtc": "^125.0.12"
-  },
-  "peerDependenciesMeta": {
-    "@livekit/react-native": {
-      "optional": true
-    },
-    "@livekit/react-native-webrtc": {
-      "optional": true
-    }
+    "react-native": ">=0.60.0"
   },
   "publishConfig": {
     "access": "public"
