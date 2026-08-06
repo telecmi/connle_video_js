@@ -216,6 +216,16 @@ export default function App(): React.JSX.Element {
     };
   }, []);
 
+  // Dismiss the native CallKit/ConnectionService call — MUST run on every
+  // path that ends a call locally, or the OS call screen keeps its timer
+  // running. (report, not request — no endCall event loop.)
+  const endNativeCall = useCallback(() => {
+    if (callkitUuidRef.current) {
+      if (RNCallKeep) RNCallKeep.reportEndCallWithUUID(callkitUuidRef.current, 2);
+      callkitUuidRef.current = null;
+    }
+  }, []);
+
   const resetCall = useCallback(() => {
     setCallState('idle');
     setIncoming(null);
@@ -275,11 +285,7 @@ export default function App(): React.JSX.Element {
       resetCall();
       setStatus('Connected — ready for calls');
       log(`onEnded: ${safeStringify(d)}`);
-      // Dismiss the CallKit call (report, not request — no endCall event loop).
-      if (callkitUuidRef.current) {
-        if (RNCallKeep) RNCallKeep.reportEndCallWithUUID(callkitUuidRef.current, 2);
-        callkitUuidRef.current = null;
-      }
+      endNativeCall();
     });
 
     // ---- Media room (LiveKit) ----
@@ -291,6 +297,7 @@ export default function App(): React.JSX.Element {
     });
     connleai.on('disconnected', (d: any) => {
       resetCall();
+      endNativeCall();
       log(`media disconnected: ${safeStringify(d)}`);
     });
     connleai.on('userConnected', (d: any) => {
@@ -332,7 +339,7 @@ export default function App(): React.JSX.Element {
       if (d?.type === 'video') setLocalVideoTrack(null);
       log(`localStreamRemoved: ${d?.type}`);
     });
-  }, [log, resetCall]);
+  }, [log, resetCall, endNativeCall]);
 
   // CallKit events — Answer/End tapped on the native (lock-screen) call UI.
   // The CallKit uuid IS the server call_id (set in the AppDelegate), so we can
@@ -534,7 +541,8 @@ export default function App(): React.JSX.Element {
   const onReject = useCallback(() => {
     connleRef.current?.reject((ack: any) => log(`reject ack: ${safeStringify(ack)}`));
     resetCall();
-  }, [log, resetCall]);
+    endNativeCall();
+  }, [log, resetCall, endNativeCall]);
 
   const onHangup = useCallback(() => {
     if (callState === 'outgoing') {
@@ -543,7 +551,8 @@ export default function App(): React.JSX.Element {
       connleRef.current?.hangup((ack: any) => log(`hangup ack: ${safeStringify(ack)}`));
     }
     resetCall();
-  }, [callState, log, resetCall]);
+    endNativeCall();
+  }, [callState, log, resetCall, endNativeCall]);
 
   const onToggleMute = useCallback(() => {
     connleRef.current?.toggleAudio();
