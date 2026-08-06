@@ -337,6 +337,7 @@ export default class ConnlySignalling extends EventEmitter {
         if (this.answerInFlight) return;
 
         this.answerInFlight = true;
+        if (this._push && typeof this._push.markAnswered === 'function') this._push.markAnswered(this.callId);
         this.socket.emit('connle_answer_call', { call_id: this.callId }, (ack) => {
             if (ack?.code === 200) {
                 if (!this.video.isConnected()) {

@@ -294,6 +294,14 @@ export default class ConnlePush {
         }
     }
 
+    /** The app answered this call — the ring backstop must not kill it. */
+    markAnswered( call_id ) {
+        if ( this._ringTimers && call_id ) {
+            clearTimeout( this._ringTimers[ String( call_id ) ] );
+            delete this._ringTimers[ String( call_id ) ];
+        }
+    }
+
     /** On mobile the push IS the incoming-call transport (native CallKit /
      *  ConnectionService ring); the socket incoming event is for browsers.
      *  Once this device holds a push token, socket-delivered invites are
@@ -385,6 +393,10 @@ export default class ConnlePush {
         }
         try {
             if ( data.type === 'video_cancel' ) {
+                if ( this._ringTimers && data.call_id ) {
+                    clearTimeout( this._ringTimers[ String( data.call_id ) ] );
+                    delete this._ringTimers[ String( data.call_id ) ];
+                }
                 // Dismiss the native Android ring for this exact call.
                 const ck = loadCallKeep();
                 if ( ck && data.call_id ) {
@@ -404,6 +416,16 @@ export default class ConnlePush {
                     try {
                         ck.displayIncomingCall( String( data.call_id ), String( data.from || 'unknown' ), caller, 'generic', hasVideo );
                         dbg( 'native Android ring for', data.call_id );
+                        // Ring-timeout backstop (a few seconds above the
+                        // server's 45s ringing TTL): if the cancel push gets
+                        // lost, the ring must still die. Cleared on answer.
+                        this._ringTimers = this._ringTimers || {};
+                        const uuid = String( data.call_id );
+                        clearTimeout( this._ringTimers[ uuid ] );
+                        this._ringTimers[ uuid ] = setTimeout( () => {
+                            delete this._ringTimers[ uuid ];
+                            try { ck.reportEndCallWithUUID( uuid, 3 ); dbg( 'ring timeout backstop ended', uuid ); } catch { /* ignore */ }
+                        }, 50000 );
                     } catch ( e ) {
                         dbg( 'displayIncomingCall failed —', e && e.message );
                     }
