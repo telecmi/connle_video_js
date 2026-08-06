@@ -11,21 +11,29 @@ camera on/off, loudspeaker/earpiece, flip camera, and screen share.
 Installation and native setup differ per platform — follow the guide for yours.
 The **call API is identical** everywhere; it's in the [API reference](#api-reference) below.
 
-| Platform | Setup guide |
-| :--- | :--- |
-| 🌐 **Web & Electron** | **→ [Web & Electron guide](README.web.md)** |
-| 📱 **React Native iOS** | **→ [iOS guide](README.react-native-ios.md)** |
-| 🤖 **React Native Android** | **→ [Android guide](README.react-native-android.md)** |
+Two packages, one API (same model as the PIOPIY voice SDK):
+
+| Platform | Package | Setup guide |
+| :--- | :--- | :--- |
+| 🌐 **Web & Electron** | `@telecmi/connle-video` | **→ [Web & Electron guide](README.web.md)** |
+| 📱 **React Native iOS** | `@telecmi/connle-video-native` | **→ [iOS guide](README.react-native-ios.md)** |
+| 🤖 **React Native Android** | `@telecmi/connle-video-native` | **→ [Android guide](README.react-native-android.md)** |
 
 ```bash
+# Browser / Electron
 npm install @telecmi/connle-video
+
+# React Native (ships the LiveKit engine, CallKit and VoIP push support with it)
+npm install @telecmi/connle-video-native
 ```
 
 > [!NOTE]
-> **React Native** additionally needs the native peers `@livekit/react-native`
-> and `@livekit/react-native-webrtc` — see the
-> [iOS guide](README.react-native-ios.md) and [Android guide](README.react-native-android.md).
-> **Web & Electron** users install only `@telecmi/connle-video`.
+> The native package bundles everything call-related — LiveKit WebRTC engine,
+> `@telecmi/react-native-callkeep`, iOS VoIP push. Android push additionally
+> needs Firebase Messaging installed in your app — see the
+> [Android guide](README.react-native-android.md). On mobile, incoming calls
+> arrive via **push notification** in every app state (see
+> [React Native overview](README.react-native.md)).
 
 > [!TIP]
 > A complete, runnable React Native example app (inbound + outbound audio/video

@@ -27,7 +27,7 @@ support, VoIP push) ships **with** the SDK, same model as
 `@telecmi/piopiy-native`:
 
 ```bash
-npm install @telecmi/connle-video
+npm install @telecmi/connle-video-native
 ```
 
 Because those native modules arrive *nested* under the SDK, tell React
@@ -161,7 +161,7 @@ local network") — **allow** them.
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { VideoView } from '@livekit/react-native';
-import ConnleVideo from '@telecmi/connle-video';
+import ConnleVideo from '@telecmi/connle-video-native';
 
 export default function CallScreen() {
   const connleRef = useRef(null);

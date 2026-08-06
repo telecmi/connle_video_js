@@ -22,7 +22,7 @@ audio & video calls.
 ## 1. Install the SDK and its native peers
 
 ```bash
-npm install @telecmi/connle-video
+npm install @telecmi/connle-video-native
 
 # Android push wake-ups additionally need Firebase Messaging (installed
 # explicitly in YOUR app — see the push section below):
@@ -31,7 +31,7 @@ npm install @react-native-firebase/app @react-native-firebase/messaging
 
 | Package | Why it's needed |
 | :--- | :--- |
-| `@telecmi/connle-video` | The Connle SDK (signalling + call control). |
+| `@telecmi/connle-video-native` | The Connle SDK (signalling + call control). |
 | `@livekit/react-native` | LiveKit RN bindings: `registerGlobals()` + audio session. **Required.** |
 | `@livekit/react-native-webrtc` | The native WebRTC implementation. **Required.** |
 
@@ -120,7 +120,7 @@ npx react-native run-android
 import React, { useEffect, useRef, useState } from 'react';
 import { View, PermissionsAndroid } from 'react-native';
 import { VideoView } from '@livekit/react-native';
-import ConnleVideo from '@telecmi/connle-video';
+import ConnleVideo from '@telecmi/connle-video-native';
 
 export default function CallScreen() {
   const connleRef = useRef(null);
