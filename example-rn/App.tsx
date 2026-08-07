@@ -46,11 +46,11 @@ type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
 // the same Wi-Fi). Media stays on the production SFU because the local
 // connle_livekit issues room tokens for sfu.connle.com.
 // Production values: server wss://signal.connle.com, PUSH_REST undefined.
-const DEFAULT_SERVER = 'ws://192.168.0.211:2029';
+const DEFAULT_SERVER = 'ws://192.168.0.133:2029';
 const DEFAULT_MEDIA  = 'wss://sfu.connle.com';
 // connly_rest — used for BOTH /agent/login (email+password → token) and the
 // SDK's push registration (/video/push/register). Production: https://api.connle.com
-const REST_BASE = 'http://192.168.0.211:6001';
+const REST_BASE = 'http://192.168.0.133:6001';
 const PUSH_REST: string | undefined = REST_BASE;
 
 function safeStringify(value: any): string {
