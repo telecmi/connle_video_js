@@ -161,6 +161,10 @@ function loadCallKeep() {
                     cancelButton: 'Cancel',
                     okButton: 'OK',
                     additionalPermissions: [],
+                    // Native OS-side ring timeout (fork >= 4.3.18): survives the
+                    // headless JS context AND total network loss — the ring can
+                    // never outlive the server's 35s no-answer window by much.
+                    ringTimeout: 40000,
                     foregroundService: {
                         channelId: 'com.telecmi.connle.video',
                         channelName: 'Incoming video calls',
@@ -425,7 +429,7 @@ export default class ConnlePush {
                         this._ringTimers[ uuid ] = setTimeout( () => {
                             delete this._ringTimers[ uuid ];
                             try { ck.reportEndCallWithUUID( uuid, 3 ); dbg( 'ring timeout backstop ended', uuid ); } catch { /* ignore */ }
-                        }, 50000 );
+                        }, 40000 );
                     } catch ( e ) {
                         dbg( 'displayIncomingCall failed —', e && e.message );
                     }
