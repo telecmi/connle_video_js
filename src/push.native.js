@@ -152,7 +152,7 @@ function loadCallKeep() {
     if ( _callKeep && !_callKeepSetup ) {
         _callKeepSetup = true;
         try {
-            _callKeep.setup( {
+            const setupPromise = _callKeep.setup( {
                 ios: { appName: 'Connle' },
                 android: {
                     alertTitle: 'Permissions required',
@@ -171,6 +171,16 @@ function loadCallKeep() {
                     },
                 },
             } );
+            // Same post-setup sequence as the voice SDK — on Android these
+            // finish wiring the phone account and the JS event bridge; without
+            // them answer events and foregrounding are unreliable.
+            Promise.resolve( setupPromise ).then( () => {
+                try { _callKeep.setAvailable( true ); } catch { /* ignore */ }
+                if ( Platform.OS === 'android' ) {
+                    try { _callKeep.registerPhoneAccount(); } catch { /* ignore */ }
+                    try { _callKeep.registerAndroidEvents(); } catch { /* ignore */ }
+                }
+            } ).catch( () => { } );
         } catch ( e ) {
             dbg( 'callkeep setup failed —', e && e.message );
         }
