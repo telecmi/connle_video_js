@@ -60,19 +60,27 @@ npm install @react-native-firebase/app @react-native-firebase/messaging
 
 ## 2. Manifest permissions
 
-Add to `android/app/src/main/AndroidManifest.xml` (above `<application>`):
+Your app's `AndroidManifest.xml` needs only the media/network set:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 <uses-permission android:name="android.permission.WAKE_LOCK" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 ```
 
----
+Everything call-related is merged automatically from the SDK's bundled
+`@telecmi/react-native-callkeep` (library manifest): `FOREGROUND_SERVICE`,
+`FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_MICROPHONE`,
+`POST_NOTIFICATIONS`, `USE_FULL_SCREEN_INTENT`, `MANAGE_OWN_CALLS`,
+`READ_PHONE_STATE`/`READ_PHONE_NUMBERS`, `CALL_PHONE`, and the
+`VoiceConnectionService` declaration itself — do not re-declare them.
+
+Runtime permission dialogs (mic, camera, notifications) are requested by
+the SDK when a call is answered from the native screen; request them at
+app launch too for the smoothest first call (see §3).
 
 ## 3. Request runtime permissions
 
