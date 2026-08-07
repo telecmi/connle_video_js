@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-08-07
+
+First stable release — device-verified end to end on iOS and Android.
+
+### Added
+- **Two packages, one codebase**: `@telecmi/connle-video` (browser) and `@telecmi/connle-video-native` (React Native) — versions synced, same API. The native package bundles its entire call stack (video/WebRTC engine, `@telecmi/react-native-callkeep`, iOS VoIP push support): apps install one package.
+- **Native incoming-call experience owned by the SDK**: CallKit (iOS) / ConnectionService (Android) ringing on every push-delivered call with the caller's display name (`from_name`); Answer/End taps on the native screen drive the SDK directly; video answers bring the app to the foreground (audio answers stay on the system call screen); lock-screen answering; cold-start answers (tap before the app is ready) and answers that land while the socket is down are parked and completed automatically.
+- **Android zero-config engine init**: a bundled init library runs the engine's required native setup before `Application.onCreate` — no MainApplication changes.
+- **Runtime media permissions handled by the SDK**: mic (+ camera for video) requested at answer; a denied camera degrades to audio-only instead of failing the call.
+- **Multi-device**: all registered devices ring; answering or rejecting on one dismisses the others; the acting device's call is never affected.
+- **Reliability**: ring self-terminates (~40s) even with no network; one ring per call (socket+push dedupe by `call_id`); a signed-out device refuses call pushes; cancel dismisses the exact ringing call; Telecom-level unmute asserted on media connect (Android one-way-audio fix); camera flip via exact device id (Android).
+- **Production defaults built in, all overridable**: signalling `wss://signal.connle.com`, media `wss://sfu.connle.com`, push REST `https://api.connle.com` (`options.push.apiBase`).
+- New events: `callCancelled`, `cameraSwitched`. New method: `unregisterPush(callback)` — call before sign-out.
+- Documentation: platform picker, React Native landing page with the RN-only API, full iOS/Android native setup guides.
+
 ## [0.5.0] - 2026-08-04
 
 ### Added
