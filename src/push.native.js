@@ -241,11 +241,14 @@ export default class ConnlePush {
         // screen — this event is the echo): do nothing.
         if ( this._answeredIds && this._answeredIds.includes( uuid ) ) return;
         const current = String( this.connle.callId || '' ).toLowerCase();
-        if ( current === uuid ) {
+        if ( current === uuid && this.connle.isConnected ) {
             this._answerWithPermissions();
         } else {
-            // Invite hasn't reached JS yet (push launched a killed app) —
-            // completed by _onPush when it arrives.
+            // Not actionable yet — either the invite hasn't reached JS (push
+            // launched a killed app) or the socket is down (lock-screen answer
+            // while backgrounded drops it). Parked; completed by _onPush when
+            // the invite arrives OR by onConnected() when the socket is back.
+            dbg( 'native answer parked (invite/socket not ready):', uuid );
             this._pendingNativeAnswer = uuid;
         }
     }
@@ -458,6 +461,14 @@ export default class ConnlePush {
      *  the held device token. Idempotent — an already-sent token is skipped. */
     onConnected() {
         this.signedOut = false; // a fresh session accepts calls again
+        // A native Answer tap that arrived while the socket was down (typical
+        // lock-screen wake) completes now that the session is live.
+        const pending = this._pendingNativeAnswer;
+        if ( pending && String( this.connle.callId || '' ).toLowerCase() === pending ) {
+            this._pendingNativeAnswer = null;
+            dbg( 'completing parked native answer on reconnect:', pending );
+            this._answerWithPermissions();
+        }
         if ( this.deviceToken && this.registered !== this.deviceToken.token ) {
             this._register( this.deviceToken );
         }
@@ -536,6 +547,9 @@ export default class ConnlePush {
         }
         try {
             if ( data.type === 'video_cancel' ) {
+                if ( data.call_id && this._pendingNativeAnswer === String( data.call_id ).toLowerCase() ) {
+                    this._pendingNativeAnswer = null;
+                }
                 // Answered HERE: this cancel is the multi-device dismissal for
                 // the sibling devices — not for us. Never end a live call.
                 if ( data.call_id && this._answeredIds && this._answeredIds.includes( String( data.call_id ) ) ) {
