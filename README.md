@@ -103,6 +103,7 @@ connle.connect();
 | `serverUrl` | Signalling WebSocket URL (e.g. `wss://signal.connle.com`). | string | ✅ |
 | `token` | Auth token that identifies the connecting user. | string | ✅ |
 | `mediaUrl` | Media server WebSocket URL (e.g. `wss://sfu.connle.com`). Uses the default if omitted. | string | optional |
+| `options` | 📱 React Native only — push behavior: `{autoPush, push: {apiBase, registerPath, unregisterPath}}`. See the [React Native guide](README.react-native.md#react-nativeonly-api). | object | optional |
 
 ---
 
@@ -120,6 +121,15 @@ Opens the signalling connection. Call once after creating the instance.
 
 ##### `disconnect()`
 Closes the signalling connection.
+
+##### `unregisterPush(callback)` — 📱 React Native only
+Removes this device's push registration so a signed-out device stops
+ringing. **Call it before `disconnect()` on sign-out** (it needs the live
+session):
+
+```js
+connle.unregisterPush(() => connle.disconnect());
+```
 
 #### Call control
 
@@ -195,6 +205,11 @@ Register a single handler for each signalling event:
 | `onMessage(cb)` | A custom message is received. |
 
 ### Event Handlers (media & in-call)
+
+> 📱 React Native additionally emits **`callCancelled`** — the ring ended
+> without this device answering (caller cancelled, or the user answered /
+> rejected on another of their devices). Clear any ringing UI; the native
+> call screen is dismissed automatically.
 
 The media layer is event-driven. Listen with `.on(eventName, callback)`.
 
