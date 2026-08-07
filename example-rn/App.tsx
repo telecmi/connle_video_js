@@ -369,6 +369,11 @@ export default function App(): React.JSX.Element {
       }
       log(`CallKit answer: ${uuid}`);
       callkitUuidRef.current = uuid;
+      // Android: answering on the ConnectionService screen doesn't surface
+      // the app — bring the in-call UI to the foreground ourselves.
+      if (Platform.OS === 'android') {
+        try { RNCallKeep.backToForeground(); } catch {}
+      }
       const inc = incomingRef.current;
       if (inc && String(inc.call_id ?? '').toLowerCase() === uuid) {
         connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
