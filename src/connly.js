@@ -129,6 +129,9 @@ export default class ConnlySignalling extends EventEmitter {
 
         this.socket.on('connle_on_ended', (data, callback) => {
 
+            if (this._push && typeof this._push.onCallEnded === 'function') {
+                this._push.onCallEnded(data?.call_id || this.callId);
+            }
             if (this.video && typeof this.video.disconnect === 'function') {
                 this.video.disconnect(this);
             }
@@ -354,10 +357,16 @@ export default class ConnlySignalling extends EventEmitter {
 
         this.answerInFlight = true;
         if (this._push && typeof this._push.markAnswered === 'function') this._push.markAnswered(this.callId);
-        this.socket.emit('connle_answer_call', { call_id: this.callId }, (ack) => {
+        this.socket.emit('connle_answer_call', { call_id: this.callId }, async (ack) => {
             if (ack?.code === 200) {
                 if (!this.video.isConnected()) {
-                    const callType = this.callType || this.normalizeCallMedia();
+                    let callType = this.callType || this.normalizeCallMedia();
+                    // Runtime permissions before media (Android): camera denied
+                    // on a video call degrades to audio-only instead of the
+                    // native capturer aborting the process.
+                    if (this._push && typeof this._push.ensureMediaPermissions === 'function') {
+                        try { callType = await this._push.ensureMediaPermissions(callType); } catch { /* keep */ }
+                    }
                     this.connectMedia(callType.audio, callType.video, this.room_token);
                 }
             } else {

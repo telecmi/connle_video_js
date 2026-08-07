@@ -275,10 +275,17 @@ export default class Video {
         // Connection state changes
         this.room.on('connected', () => {
             _this.emit('connected', { connected: true, user_id: this.room.localParticipant.identity });
+            // Native call UI (RN): mark ACTIVE + assert Telecom unmute.
+            if (_this._push && typeof _this._push.onMediaConnected === 'function') {
+                _this._push.onMediaConnected(_this.callId);
+            }
         });
 
         this.room.on('disconnected', (reason) => {
             _this.emit('disconnected', { connected: false, user_id: this.room.localParticipant.identity, reason });
+            if (_this._push && typeof _this._push.onCallEnded === 'function') {
+                _this._push.onCallEnded(_this.callId);
+            }
         });
 
         this.room.on('reconnecting', () => {

@@ -261,27 +261,59 @@ export default class ConnlePush {
         }
     }
 
-    // Answer after securing runtime permissions. Without CAMERA, LiveKit's
-    // native capturer aborts the whole process the moment a video call joins
-    // — the app "crashes on answer". Camera denied -> answer audio-only;
-    // never let a permission take the app down.
+    // Answer after securing runtime permissions (shared helper) — a denied
+    // camera degrades to audio-only, never a crash.
     async _answerWithPermissions() {
+        if ( this.connle.callType ) {
+            this.connle.callType = await this.ensureMediaPermissions( this.connle.callType );
+        }
+        this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
+    }
+
+    /** Media connected: native call goes ACTIVE and the Telecom-level mute
+     *  is asserted OFF (Telecom can bring the call up muted, silencing the
+     *  mic system-wide even though the track publishes). */
+    onMediaConnected( call_id ) {
+        const ck = loadCallKeep();
+        if ( !ck || !call_id ) return;
+        const uuid = String( call_id );
+        try { ck.setCurrentCallActive( uuid ); } catch { /* ignore */ }
+        if ( Platform.OS === 'android' ) {
+            try { ck.setMutedCall( uuid, false ); } catch { /* ignore */ }
+        }
+    }
+
+    /** Call over (remote end, local hangup/reject, media drop): dismiss the
+     *  native call UI. Report, not request — no endCall event loop. */
+    onCallEnded( call_id ) {
+        const ck = loadCallKeep();
+        if ( !ck || !call_id ) return;
+        try { ck.reportEndCallWithUUID( String( call_id ), 2 ); } catch { /* ignore */ }
+        if ( this._ringTimers ) {
+            clearTimeout( this._ringTimers[ String( call_id ) ] );
+            delete this._ringTimers[ String( call_id ) ];
+        }
+    }
+
+    /** Secure runtime permissions before media starts (Android). Camera denied
+     *  on a video call -> returns adjusted media (audio-only) instead of
+     *  letting LiveKit's capturer abort the process. */
+    async ensureMediaPermissions( media ) {
+        if ( Platform.OS !== 'android' ) return media;
         try {
-            if ( Platform.OS === 'android' ) {
-                const wantsVideo = !!( this.connle.callType && this.connle.callType.video );
-                const perms = [ PermissionsAndroid.PERMISSIONS.RECORD_AUDIO ];
-                if ( wantsVideo ) perms.push( PermissionsAndroid.PERMISSIONS.CAMERA );
-                const res = await PermissionsAndroid.requestMultiple( perms );
-                const camOk = !wantsVideo || res[ PermissionsAndroid.PERMISSIONS.CAMERA ] === PermissionsAndroid.RESULTS.GRANTED;
-                if ( !camOk && this.connle.callType ) {
-                    dbg( 'camera permission denied — answering audio-only' );
-                    this.connle.callType = { ...this.connle.callType, video: false };
-                }
+            const wantsVideo = !!( media && media.video );
+            const perms = [ PermissionsAndroid.PERMISSIONS.RECORD_AUDIO ];
+            if ( wantsVideo ) perms.push( PermissionsAndroid.PERMISSIONS.CAMERA );
+            const res = await PermissionsAndroid.requestMultiple( perms );
+            const camOk = !wantsVideo || res[ PermissionsAndroid.PERMISSIONS.CAMERA ] === PermissionsAndroid.RESULTS.GRANTED;
+            if ( !camOk ) {
+                dbg( 'camera permission denied — continuing audio-only' );
+                return { ...media, video: false };
             }
         } catch ( e ) {
             dbg( 'permission request failed —', e && e.message );
         }
-        this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
+        return media;
     }
 
     /** Called by connly._onPushIncoming: was Answer already tapped natively? */
