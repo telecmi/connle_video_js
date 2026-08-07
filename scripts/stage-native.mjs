@@ -75,7 +75,7 @@ const nativePkg = {
     '@livekit/react-native-webrtc': '~125.0.12',
     // Our CallKeep fork: upstream 4.3.16 + duplicate-@ReactMethod fix +
     // library-manifest ConnectionService merge. Bundled — apps install nothing.
-    '@telecmi/react-native-callkeep': '4.3.18',
+    '@telecmi/react-native-callkeep': '4.3.17',
     // iOS VoIP push. Apps list it in react-native.config.js (transitive deps
     // are not autolinked) and install nothing.
     'react-native-voip-push-notification': '^3.3.3',
