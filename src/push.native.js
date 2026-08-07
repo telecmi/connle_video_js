@@ -220,9 +220,6 @@ export default class ConnlePush {
                 const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
                 if ( !uuid ) return;
                 dbg( 'native answer:', uuid );
-                if ( Platform.OS === 'android' ) {
-                    try { ck.backToForeground(); } catch { /* ignore */ }
-                }
                 this._handleNativeAnswer( uuid );
             } );
             ck.addEventListener( 'endCall', ( ev ) => {
@@ -270,17 +267,19 @@ export default class ConnlePush {
         if ( this.connle.callType ) {
             this.connle.callType = await this.ensureMediaPermissions( this.connle.callType );
         }
+        // Media-aware foregrounding (Android): a VIDEO call's UI is the app —
+        // surface it immediately and again after the Telecom transition
+        // settles. An AUDIO call stays on the system call screen, exactly
+        // like a phone call (the user opens the app if they want it).
+        const isVideo = !!( this.connle.callType && this.connle.callType.video );
+        const ck = Platform.OS === 'android' ? loadCallKeep() : null;
+        if ( ck && isVideo ) {
+            try { ck.backToForeground(); } catch { /* ignore */ }
+        }
         this.connle.answer( ( ack ) => {
             dbg( 'native answer ack:', ack && ack.code );
-            // Android shows the SYSTEM in-call screen when a Telecom-managed
-            // call is answered — one delayed launch (after that transition
-            // settles) lands the app's own call UI on top. Single shot: rapid
-            // repeated launches get the process killed on Samsung.
-            if ( Platform.OS === 'android' && ack && ack.code === 200 ) {
-                const ck = loadCallKeep();
-                if ( ck ) {
-                    setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 800 );
-                }
+            if ( ck && isVideo && ack && ack.code === 200 ) {
+                setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 800 );
             }
         } );
     }
