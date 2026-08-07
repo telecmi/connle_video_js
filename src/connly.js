@@ -302,9 +302,20 @@ export default class ConnlySignalling extends EventEmitter {
         return false;
     }
 
-    // The caller cancelled while this device was ringing (push-delivered).
+    // The call stopped ringing for this device: caller cancelled, or the user
+    // answered/rejected on ANOTHER of their devices (multi-device dismissal).
     _onPushCancel(data) {
         try {
+            const cid = String(data?.call_id || '');
+            // Clear the pending incoming call so a stale Answer tap can't act
+            // on a dead call — but never touch an ANSWERED (active) call.
+            if (cid && this.pendingIncomingCall && String(this.pendingIncomingCall.call_id) === cid) {
+                this.pendingIncomingCall = null;
+                if (String(this.callId) === cid) {
+                    this.callId = null;
+                    this.room_token = null;
+                }
+            }
             this.emit('callCancelled', { ...data, transport: 'push' });
         } catch { /* ignore */ }
     }

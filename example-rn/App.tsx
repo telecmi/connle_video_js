@@ -281,6 +281,14 @@ export default function App(): React.JSX.Element {
       log(`onAnswered: ${safeStringify(d)}`);
     });
 
+    // Ring dismissed remotely: caller cancelled, or this user answered /
+    // rejected on another device. Clear the banner and the native call UI.
+    connleai.on('callCancelled', (d: any) => {
+      log(`callCancelled: ${safeStringify(d)}`);
+      resetCall();
+      endNativeCall();
+    });
+
     connleai.onEnded((d: any) => {
       resetCall();
       setStatus('Connected — ready for calls');
