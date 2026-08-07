@@ -11,6 +11,7 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
+import com.livekit.reactnative.LiveKitReactNative
 
 class MainApplication : Application(), ReactApplication {
 
@@ -35,6 +36,11 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // REQUIRED for LiveKit on Android: initializes the audio device module.
+    // JS registerGlobals() does NOT do this — without it every room join
+    // throws "Audio device module is not initialized" and (in Bridgeless RN)
+    // takes the whole app down.
+    LiveKitReactNative.setup(this)
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.

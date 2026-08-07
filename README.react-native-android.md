@@ -58,6 +58,24 @@ npm install @react-native-firebase/app @react-native-firebase/messaging
 
 ---
 
+## 2. MainApplication — REQUIRED LiveKit init
+
+In `android/app/src/main/java/<your package>/MainApplication.kt`:
+
+```kotlin
+import com.livekit.reactnative.LiveKitReactNative
+
+override fun onCreate() {
+    super.onCreate()
+    LiveKitReactNative.setup(this)   // BEFORE SoLoader.init
+    // ...
+}
+```
+
+Without this one line every call join crashes with
+"Audio device module is not initialized". The JS side cannot do it for you —
+it must run in `Application.onCreate`.
+
 ## 2. Manifest permissions
 
 Your app's `AndroidManifest.xml` needs only the media/network set:
