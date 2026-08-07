@@ -45,8 +45,8 @@ const nativePkg = {
   version: rootPkg.version, // synced — bump once, ship both
   publishConfig: { access: 'public' },
   description:
-    'Official Connle video SDK for React Native — video/audio calls over ' +
-    'LiveKit, native CallKit/ConnectionService ringing, and push wake-ups ' +
+    'Official Connle video SDK for React Native — high-quality video/audio ' +
+    'calls, native CallKit/ConnectionService ringing, and push wake-ups ' +
     'on iOS and Android.',
   main: 'lib/index.js',
   'react-native': 'lib/index.js',

@@ -22,7 +22,7 @@ audio & video calls.
 
 ## 1. Install the SDK
 
-One package — everything call-related (LiveKit WebRTC engine, CallKit
+One package — everything call-related (the SDK's native video/WebRTC engine, CallKit
 support, VoIP push) ships **with** the SDK, same model as
 `@telecmi/piopiy-native`:
 
@@ -49,7 +49,7 @@ module.exports = {
 
 > [!IMPORTANT]
 > Do **not** also install `react-native-callkeep` (upstream) or your own copies
-> of the LiveKit packages — duplicates collide at the native level. If your app
+> of the SDK's engine packages — duplicates collide at the native level. If your app
 > already carries any of them as direct dependencies, remove them.
 
 ---
@@ -182,7 +182,7 @@ export default function CallScreen() {
       // connle.answer();  /  connle.reject();  -> bind to your UI
     });
 
-    // Render remote + local video. `data.track` is the LiveKit track VideoView wants.
+    // Render remote + local video. `data.track` is the video track VideoView wants.
     connle.on('streamAdded',  (d) => { if (d.type === 'video') setRemoteVideoTrack(d.track); });
     connle.on('streamRemoved',(d) => { if (d.type === 'video') setRemoteVideoTrack(null); });
     connle.on('localStreamAdded', (d) => { if (d.type === 'video') setLocalVideoTrack(d.track); });
@@ -213,7 +213,7 @@ export default function CallScreen() {
 For the full method & event list see the **[API reference](README.md#api-reference)**.
 
 ### Rendering video
-Render the LiveKit track from `streamAdded` / `localStreamAdded` (the `data.track`
+Render the video track from `streamAdded` / `localStreamAdded` (the `data.track`
 field) with **`<VideoView>`** from `@livekit/react-native`. Audio plays
 automatically — no component needed.
 

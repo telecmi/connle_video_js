@@ -1,6 +1,6 @@
 # Connle Video SDK — React Native
 
-Official Connle video SDK for React Native: video/audio calls over LiveKit,
+Official Connle video SDK for React Native: high-quality video/audio calls,
 native incoming-call UI (CallKit on iOS, ConnectionService on Android), and
 push wake-ups in every app state — foreground, background, or killed.
 
@@ -8,7 +8,7 @@ push wake-ups in every app state — foreground, background, or killed.
 npm install @telecmi/connle-video-native
 ```
 
-Everything call-related ships **with** the SDK — the LiveKit WebRTC engine,
+Everything call-related ships **with** the SDK — its own native video/WebRTC engine,
 `@telecmi/react-native-callkeep`, and iOS VoIP push support. You install one
 package (plus Firebase Messaging on Android; see the Android guide).
 

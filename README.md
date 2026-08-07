@@ -23,12 +23,12 @@ Two packages, one API (same model as the PIOPIY voice SDK):
 # Browser / Electron
 npm install @telecmi/connle-video
 
-# React Native (ships the LiveKit engine, CallKit and VoIP push support with it)
+# React Native (ships its own video engine, CallKit and VoIP push support)
 npm install @telecmi/connle-video-native
 ```
 
 > [!NOTE]
-> The native package bundles everything call-related — LiveKit WebRTC engine,
+> The native package bundles everything call-related — its own native video/WebRTC engine,
 > `@telecmi/react-native-callkeep`, iOS VoIP push. Android push additionally
 > needs Firebase Messaging installed in your app — see the
 > [Android guide](README.react-native-android.md). On mobile, incoming calls
@@ -67,10 +67,10 @@ connle.onIncomingCall((data) => {
   connle.answer();   // or connle.reject()
 });
 
-// 4. Media (LiveKit) events
+// 4. Media events
 connle.on('connected',    (d) => console.log('media connected', d.user_id));
 connle.on('streamAdded',  (d) => {
-  // d.track  = LiveKit track  → render with <VideoView> on React Native
+  // d.track  = video track → render with <VideoView> on React Native
   // d.stream = MediaStreamTrack → attach to a <video> element on the web
   if (d.type === 'video') renderRemoteVideo(d);
 });
@@ -199,7 +199,7 @@ Register a single handler for each signalling event:
 The media layer is event-driven. Listen with `.on(eventName, callback)`.
 
 #### Connection (media room)
-* **`connected`** — the LiveKit media room is joined. Payload: `{ connected: true, user_id }`.
+* **`connected`** — the media session is established. Payload: `{ connected: true, user_id }`.
 * **`disconnected`** — the media room is left. Payload: `{ connected: false, user_id }`.
 * **`reconnecting`** / **`reconnected`** — media reconnection in progress / restored.
 
@@ -211,7 +211,7 @@ The media layer is event-driven. Listen with `.on(eventName, callback)`.
 * **`streamAdded`** — a remote track was subscribed.
   * **Payload**: `{ type, track, stream, user_id, source }`
     * `type` — `'audio'` | `'video'`
-    * `track` — the LiveKit track → pass to `<VideoView>` on React Native
+    * `track` — the video track → pass to `<VideoView>` on React Native
     * `stream` — the raw `MediaStreamTrack` → attach to a `<video>` element on the web
     * `source` — `'audio'` | `'video'` | `'screen'`
 * **`streamRemoved`** — a remote track was unsubscribed. Payload: `{ type, track, user_id, source }`.

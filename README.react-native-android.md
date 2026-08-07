@@ -32,7 +32,7 @@ npm install @react-native-firebase/app @react-native-firebase/messaging
 | Package | Why it's needed |
 | :--- | :--- |
 | `@telecmi/connle-video-native` | The Connle SDK (signalling + call control). |
-| `@livekit/react-native` | LiveKit RN bindings: `registerGlobals()` + audio session. **Required.** |
+| `@livekit/react-native` | The SDK's engine bindings (audio session + globals). **Required.** |
 | `@livekit/react-native-webrtc` | The native WebRTC implementation. **Required.** |
 
 > [!IMPORTANT]
@@ -58,12 +58,12 @@ npm install @react-native-firebase/app @react-native-firebase/messaging
 
 ---
 
-## 2. LiveKit native init — automatic
+## 2. Native engine initialization — automatic
 
-LiveKit's Android audio device module is initialized by the SDK's bundled
+The engine's Android audio module is initialized by the SDK's bundled
 init provider **before `Application.onCreate`** — you write no native setup
 code. (If your app also calls `LiveKitReactNative.setup(this)` manually —
-e.g. it already integrates LiveKit directly — that's harmless; the same
+e.g. it already integrates the engine directly — that's harmless; the same
 initialization just runs again.)
 
 Troubleshooting: if a call join ever throws
@@ -218,7 +218,7 @@ export default function CallScreen() {
 For the full method & event list see the **[API reference](README.md#api-reference)**.
 
 ### Rendering video
-Render the LiveKit track from `streamAdded` / `localStreamAdded` (the `data.track`
+Render the video track from `streamAdded` / `localStreamAdded` (the `data.track`
 field) with **`<VideoView>`** from `@livekit/react-native`. Audio plays automatically.
 
 ### Audio routing & camera
