@@ -42,16 +42,16 @@ import ConnleVideo from 'connle-video-sdk';
 
 type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
 
-// LOCAL PUSH TEST — signalling + REST run on the dev Mac (device must be on
-// the same Wi-Fi). Media stays on the production SFU because the local
-// connle_livekit issues room tokens for sfu.connle.com.
-// Production values: server wss://signal.connle.com, PUSH_REST undefined.
-const DEFAULT_SERVER = 'ws://192.168.0.133:2029';
+// Production endpoints. For LOCAL testing point these at the dev machine
+// (e.g. server 'ws://<mac-ip>:2029', REST 'http://<mac-ip>:6001') — the
+// device must be on the same Wi-Fi.
+const DEFAULT_SERVER = 'wss://signal.connle.com';
 const DEFAULT_MEDIA  = 'wss://sfu.connle.com';
-// connly_rest — used for BOTH /agent/login (email+password → token) and the
-// SDK's push registration (/video/push/register). Production: https://api.connle.com
-const REST_BASE = 'http://192.168.0.133:6001';
-const PUSH_REST: string | undefined = REST_BASE;
+// TeleCMI REST — used for /agent/login (email+password → token). The SDK's
+// push registration uses its own production default; set PUSH_REST only to
+// override it (e.g. local testing).
+const REST_BASE = 'https://api.connle.com';
+const PUSH_REST: string | undefined = undefined;
 
 function safeStringify(value: any): string {
   try {

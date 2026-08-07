@@ -188,7 +188,7 @@ function loadCallKeep() {
     return _callKeep;
 }
 
-const DEFAULT_API_BASE = 'http://192.168.0.133:6001';
+const DEFAULT_API_BASE = 'https://api.connle.com';
 const DEFAULT_REGISTER_PATH = '/video/push/register';
 const DEFAULT_UNREGISTER_PATH = '/video/push/unregister';
 
