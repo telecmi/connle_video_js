@@ -25,6 +25,7 @@ mkdirSync(out, { recursive: true });
 
 const copy = [
   'lib',
+  'android',
   'index.d.ts',
   'CHANGELOG.md',
   'README.react-native.md',
@@ -52,6 +53,7 @@ const nativePkg = {
   types: 'index.d.ts',
   files: [
     'lib',
+    'android',
     'index.d.ts',
     'README.md',
     'README.react-native.md',

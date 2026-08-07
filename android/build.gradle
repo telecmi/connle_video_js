@@ -1,0 +1,30 @@
+// @telecmi/connle-video-native — Android auto-init library.
+//
+// Its ONLY job: run LiveKitReactNative.setup() before Application.onCreate
+// (ContentProvider auto-initialization, the same mechanism Firebase uses), so
+// integrating apps write ZERO native code for the SDK. Without this call the
+// LiveKit audio device module is uninitialized and every room join throws.
+apply plugin: 'com.android.library'
+
+def safeExtGet(prop, fallback) {
+    rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}
+
+android {
+    namespace 'com.telecmi.connlevideo'
+    compileSdkVersion safeExtGet('compileSdkVersion', 34)
+
+    defaultConfig {
+        minSdkVersion safeExtGet('minSdkVersion', 24)
+        targetSdkVersion safeExtGet('targetSdkVersion', 34)
+    }
+}
+
+repositories {
+    mavenCentral()
+    google()
+}
+
+dependencies {
+    implementation 'com.facebook.react:react-native:+'
+}

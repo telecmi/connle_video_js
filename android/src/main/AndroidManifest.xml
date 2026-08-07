@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Runs before Application.onCreate in every app that installs the
+             SDK — no MainApplication changes required. -->
+        <provider
+            android:name="com.telecmi.connlevideo.ConnleVideoInitProvider"
+            android:authorities="${applicationId}.connlevideoinit"
+            android:exported="false"
+            android:initOrder="900" />
+    </application>
+</manifest>

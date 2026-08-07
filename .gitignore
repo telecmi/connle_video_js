@@ -8,3 +8,4 @@ dist/
 # commit to this public repo (copy from your Firebase console / main app).
 example-rn/android/app/google-services.json
 native-pkg/
+android/build/

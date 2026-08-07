@@ -58,23 +58,18 @@ npm install @react-native-firebase/app @react-native-firebase/messaging
 
 ---
 
-## 2. MainApplication — REQUIRED LiveKit init
+## 2. LiveKit native init — automatic
 
-In `android/app/src/main/java/<your package>/MainApplication.kt`:
+LiveKit's Android audio device module is initialized by the SDK's bundled
+init provider **before `Application.onCreate`** — you write no native setup
+code. (If your app also calls `LiveKitReactNative.setup(this)` manually —
+e.g. it already integrates LiveKit directly — that's harmless; the same
+initialization just runs again.)
 
-```kotlin
-import com.livekit.reactnative.LiveKitReactNative
-
-override fun onCreate() {
-    super.onCreate()
-    LiveKitReactNative.setup(this)   // BEFORE SoLoader.init
-    // ...
-}
-```
-
-Without this one line every call join crashes with
-"Audio device module is not initialized". The JS side cannot do it for you —
-it must run in `Application.onCreate`.
+Troubleshooting: if a call join ever throws
+"Audio device module is not initialized", the init library didn't get
+autolinked — check `npx react-native config` lists
+`@telecmi/connle-video-native` with an Android project.
 
 ## 2b. MainActivity — lock-screen answering
 
