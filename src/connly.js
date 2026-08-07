@@ -4,12 +4,13 @@ import Video from './video';
 // Platform-resolved: push.native.js on React Native, push.js (no-op) on web.
 import ConnlePush from './push';
 
+const DEFAULT_SERVER_URL = 'wss://signal.connle.com';
 const DEFAULT_MEDIA_URL = 'wss://sfu.connle.com';
 
 export default class ConnlySignalling extends EventEmitter {
     constructor(serverUrl, token, mediaURL, options) {
         super();
-        this.serverUrl = serverUrl;
+        this.serverUrl = serverUrl || DEFAULT_SERVER_URL;
         this.token = token;
         this.mediaURL = mediaURL || DEFAULT_MEDIA_URL;
         this.options = options || {};

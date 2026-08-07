@@ -16,7 +16,7 @@ declare module 'connle-video-sdk' {
     unregisterPush(callback?: (result: any) => void): void;
 
     constructor(
-      serverUrl: string,
+      serverUrl: string | null | undefined,
       token: string,
       mediaURL?: string,
       options?: {

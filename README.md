@@ -101,7 +101,7 @@ connle.connect();
 #### Constructor arguments
 | Argument | Description | Type | Required |
 | :--- | :--- | :--- | :--- |
-| `serverUrl` | Signalling WebSocket URL (e.g. `wss://signal.connle.com`). | string | ✅ |
+| `serverUrl` | Signalling WebSocket URL — production default built in; pass `null` to use it, or a URL to override (e.g. `wss://signal.connle.com`). | string | ✅ |
 | `token` | Auth token that identifies the connecting user. | string | ✅ |
 | `mediaUrl` | Media server WebSocket URL (e.g. `wss://sfu.connle.com`). Uses the default if omitted. | string | optional |
 | `options` | 📱 React Native only — push behavior: `{autoPush, push: {apiBase}}`. See the [React Native guide](README.react-native.md#react-nativeonly-api). | object | optional |
