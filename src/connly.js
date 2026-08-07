@@ -282,6 +282,11 @@ export default class ConnlySignalling extends EventEmitter {
             this.prepareIncomingCall(data);
             if (typeof this.onIncomingCallCallback === 'function') this.onIncomingCallCallback(data);
             this.emit('incomingCall', data);
+            // Answer was already tapped on the native call screen while the
+            // app was still starting — complete it now.
+            if (this._push && this._push.consumePendingAnswer(data.call_id)) {
+                this.answer(() => {});
+            }
         } catch (error) {
             this.emitError({ code: 'PUSH_INCOMING_FAILED', message: error?.message || 'push_incoming_failed' });
         }

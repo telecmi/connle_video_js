@@ -141,7 +141,6 @@ function loadVoipPush() {
 let _callKeep = null;
 let _callKeepSetup = false;
 function loadCallKeep() {
-    if ( Platform.OS !== 'android' ) return null;
     if ( _callKeep ) return _callKeep;
     try {
         const mod = require( '@telecmi/react-native-callkeep' );
@@ -195,6 +194,71 @@ export default class ConnlePush {
         this.started = false;
         this.deviceToken = null;   // { token, provider, platform }
         this.registered = null;    // last token successfully registered
+        this._pendingNativeAnswer = null; // Answer tapped before the invite reached JS
+        this._nativeEventsWired = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Native call-UI events (CallKit / ConnectionService) — owned by the
+    // SDK, like the voice SDK: apps write no CallKit answer/end code.
+    // ------------------------------------------------------------------
+    _wireNativeCallEvents( ck ) {
+        if ( this._nativeEventsWired || !ck ) return;
+        this._nativeEventsWired = true;
+        try {
+            ck.addEventListener( 'answerCall', ( ev ) => {
+                const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
+                if ( !uuid ) return;
+                dbg( 'native answer:', uuid );
+                if ( Platform.OS === 'android' ) {
+                    try { ck.backToForeground(); } catch { /* ignore */ }
+                }
+                this._handleNativeAnswer( uuid );
+            } );
+            ck.addEventListener( 'endCall', ( ev ) => {
+                const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
+                if ( !uuid ) return;
+                dbg( 'native end:', uuid );
+                this._handleNativeEnd( uuid );
+            } );
+        } catch ( e ) {
+            dbg( 'native call event wiring failed —', e && e.message );
+        }
+    }
+
+    _handleNativeAnswer( uuid ) {
+        // Already answered (app UI answered first and flipped the native
+        // screen — this event is the echo): do nothing.
+        if ( this._answeredIds && this._answeredIds.includes( uuid ) ) return;
+        const current = String( this.connle.callId || '' ).toLowerCase();
+        if ( current === uuid ) {
+            this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
+        } else {
+            // Invite hasn't reached JS yet (push launched a killed app) —
+            // completed by _onPush when it arrives.
+            this._pendingNativeAnswer = uuid;
+        }
+    }
+
+    _handleNativeEnd( uuid ) {
+        if ( this._pendingNativeAnswer === uuid ) this._pendingNativeAnswer = null;
+        const current = String( this.connle.callId || '' ).toLowerCase();
+        if ( current !== uuid ) return;
+        if ( this.connle.pendingIncomingCall ) {
+            this.connle.reject( ( ack ) => dbg( 'native reject ack:', ack && ack.code ) );
+        } else {
+            this.connle.hangup( ( ack ) => dbg( 'native hangup ack:', ack && ack.code ) );
+        }
+    }
+
+    /** Called by connly._onPushIncoming: was Answer already tapped natively? */
+    consumePendingAnswer( call_id ) {
+        const uuid = String( call_id || '' ).toLowerCase();
+        if ( uuid && this._pendingNativeAnswer === uuid ) {
+            this._pendingNativeAnswer = null;
+            return true;
+        }
+        return false;
     }
 
     /** Start receiving video-call pushes and register the device token. */
@@ -206,6 +270,10 @@ export default class ConnlePush {
 
         // Receive our payload types regardless of which SDK owns the OS APIs.
         router.register( [ 'video_call', 'video_cancel' ], ( data ) => this._onPush( data ) );
+
+        // Own the native call-UI events from the start (answer/end taps on
+        // the CallKit / ConnectionService screen drive the SDK directly).
+        this._wireNativeCallEvents( loadCallKeep() );
 
         // Token: prefer the one another TeleCMI SDK already fetched (same
         // device = same token); fetch ourselves only if nobody publishes one.
@@ -427,6 +495,7 @@ export default class ConnlePush {
             if ( Platform.OS === 'android' && data.call_id ) {
                 const ck = loadCallKeep();
                 if ( ck ) {
+                    this._wireNativeCallEvents( ck );
                     const hasVideo = !!( data.media && typeof data.media === 'object' && data.media.video );
                     const caller = data.from_name || data.from || 'Incoming call';
                     try {

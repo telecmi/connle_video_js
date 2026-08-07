@@ -360,40 +360,20 @@ export default function App(): React.JSX.Element {
       },
     }).catch(() => {});
 
+    // Answer/End taps on the native screen are handled INSIDE the SDK (it
+    // answers/rejects and brings the app forward on Android). The app only
+    // tracks the uuid for its own state-sync reports.
     RNCallKeep.addEventListener('answerCall', ({callUUID}: {callUUID: string}) => {
       const uuid = String(callUUID).toLowerCase();
-      if (answeredFromUiRef.current === uuid) {
-        answeredFromUiRef.current = null;
-        log(`CallKit answer echo for ${uuid} — already answered from UI`);
-        return;
-      }
-      log(`CallKit answer: ${uuid}`);
+      log(`native answer observed: ${uuid}`);
       callkitUuidRef.current = uuid;
-      // Android: answering on the ConnectionService screen doesn't surface
-      // the app — bring the in-call UI to the foreground ourselves.
-      if (Platform.OS === 'android') {
-        try { RNCallKeep.backToForeground(); } catch {}
-      }
-      const inc = incomingRef.current;
-      if (inc && String(inc.call_id ?? '').toLowerCase() === uuid) {
-        connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
-      } else {
-        // SDK not ready yet (push launched the killed app) — finish on arrival.
-        pendingAnswerRef.current = uuid;
-      }
     });
 
     RNCallKeep.addEventListener('endCall', ({callUUID}: {callUUID: string}) => {
       const uuid = String(callUUID).toLowerCase();
-      log(`CallKit end: ${uuid}`);
-      if (callkitUuidRef.current === uuid || pendingAnswerRef.current === uuid) {
-        pendingAnswerRef.current = null;
-        callkitUuidRef.current = null;
-        const inc = incomingRef.current;
-        if (inc) connleRef.current?.reject(() => {});
-        else connleRef.current?.hangup(() => {});
-        resetCallRef.current?.();
-      }
+      log(`native end observed: ${uuid}`);
+      if (callkitUuidRef.current === uuid) callkitUuidRef.current = null;
+      resetCallRef.current?.();
     });
 
     return () => {
@@ -486,9 +466,6 @@ export default function App(): React.JSX.Element {
   useEffect(() => { connectedRef.current = connected; }, [connected]);
   const resetCallRef = useRef<(() => void) | null>(null);
   useEffect(() => { resetCallRef.current = resetCall; }, [resetCall]);
-  // uuid we already answered from the app UI — its CallKit answerCall echo
-  // must not answer the SDK a second time.
-  const answeredFromUiRef = useRef<string | null>(null);
   useEffect(() => { connectWithStoredRef.current = connectWithStored; }, [connectWithStored]);
 
   const onConnect = useCallback(() => connectWith(email, password), [connectWith, email, password]);
@@ -551,14 +528,13 @@ export default function App(): React.JSX.Element {
       return;
     }
     // Answer the SDK directly — the call must connect even if the native UI
-    // sync fails. Then flip the CallKit screen to active (its answerCall echo
-    // is swallowed by the guard above).
+    // sync fails. Then flip the CallKit screen to active (the SDK swallows
+    // the answerCall echo for an already-answered call).
     log('answer()');
+    connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
     if (RNCallKeep && callkitUuidRef.current) {
-      answeredFromUiRef.current = callkitUuidRef.current;
       try { RNCallKeep.answerIncomingCall(callkitUuidRef.current); } catch {}
     }
-    connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
   }, [incoming, log]);
 
   const onReject = useCallback(() => {
