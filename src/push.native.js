@@ -270,7 +270,19 @@ export default class ConnlePush {
         if ( this.connle.callType ) {
             this.connle.callType = await this.ensureMediaPermissions( this.connle.callType );
         }
-        this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
+        this.connle.answer( ( ack ) => {
+            dbg( 'native answer ack:', ack && ack.code );
+            // Android shows the SYSTEM in-call screen when a Telecom-managed
+            // call is answered — one delayed launch (after that transition
+            // settles) lands the app's own call UI on top. Single shot: rapid
+            // repeated launches get the process killed on Samsung.
+            if ( Platform.OS === 'android' && ack && ack.code === 200 ) {
+                const ck = loadCallKeep();
+                if ( ck ) {
+                    setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 800 );
+                }
+            }
+        } );
     }
 
     /** Media connected: native call goes ACTIVE and the Telecom-level mute

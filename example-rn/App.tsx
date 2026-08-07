@@ -268,6 +268,9 @@ export default function App(): React.JSX.Element {
 
     connleai.onAnswered((d: any) => {
       setStatus('Answered — connecting media…');
+      // Leave the ringing banner NOW — the call screen shows 'connecting'
+      // until media lands (otherwise the UI looks like it is still ringing).
+      setCallState(prev => (prev === 'incoming' ? 'active' : prev));
       log(`onAnswered: ${safeStringify(d)}`);
     });
 
