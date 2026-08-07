@@ -535,14 +535,12 @@ export default function App(): React.JSX.Element {
       Alert.alert('Permission needed', 'Camera / microphone permission required.');
       return;
     }
-    // Answer the SDK directly — the call must connect even if the native UI
-    // sync fails. Then flip the CallKit screen to active (the SDK swallows
-    // the answerCall echo for an already-answered call).
+    // Answer the SDK directly. The native call screen transitions to active
+    // via setCurrentCallActive when media connects (the voice SDK's pattern —
+    // answerIncomingCall re-triggers native answer handling and on Samsung
+    // the extra activity launches got the process killed).
     log('answer()');
     connleRef.current?.answer((ack: any) => log(`answer ack: ${safeStringify(ack)}`));
-    if (RNCallKeep && callkitUuidRef.current) {
-      try { RNCallKeep.answerIncomingCall(callkitUuidRef.current); } catch {}
-    }
   }, [incoming, log]);
 
   const onReject = useCallback(() => {

@@ -242,19 +242,7 @@ export default class ConnlePush {
         if ( this._answeredIds && this._answeredIds.includes( uuid ) ) return;
         const current = String( this.connle.callId || '' ).toLowerCase();
         if ( current === uuid ) {
-            this.connle.answer( ( ack ) => {
-                dbg( 'native answer ack:', ack && ack.code );
-                // Android: the system call screen closes on answer and can drop
-                // the user on the launcher. With the call now ACTIVE the app is
-                // exempt from background-activity-start limits — surface it.
-                if ( Platform.OS === 'android' ) {
-                    const ck = loadCallKeep();
-                    if ( ck ) {
-                        try { ck.backToForeground(); } catch { /* ignore */ }
-                        setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 900 );
-                    }
-                }
-            } );
+            this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
         } else {
             // Invite hasn't reached JS yet (push launched a killed app) —
             // completed by _onPush when it arrives.
