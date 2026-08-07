@@ -12,7 +12,7 @@
 // and receives its calls whether or not it is the claimer. When this SDK is
 // ALONE in the app, it claims the OS APIs itself.
 
-import { Platform } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
 
 const dbg = ( ...args ) => {
     try {
@@ -242,7 +242,7 @@ export default class ConnlePush {
         if ( this._answeredIds && this._answeredIds.includes( uuid ) ) return;
         const current = String( this.connle.callId || '' ).toLowerCase();
         if ( current === uuid ) {
-            this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
+            this._answerWithPermissions();
         } else {
             // Invite hasn't reached JS yet (push launched a killed app) —
             // completed by _onPush when it arrives.
@@ -259,6 +259,29 @@ export default class ConnlePush {
         } else {
             this.connle.hangup( ( ack ) => dbg( 'native hangup ack:', ack && ack.code ) );
         }
+    }
+
+    // Answer after securing runtime permissions. Without CAMERA, LiveKit's
+    // native capturer aborts the whole process the moment a video call joins
+    // — the app "crashes on answer". Camera denied -> answer audio-only;
+    // never let a permission take the app down.
+    async _answerWithPermissions() {
+        try {
+            if ( Platform.OS === 'android' ) {
+                const wantsVideo = !!( this.connle.callType && this.connle.callType.video );
+                const perms = [ PermissionsAndroid.PERMISSIONS.RECORD_AUDIO ];
+                if ( wantsVideo ) perms.push( PermissionsAndroid.PERMISSIONS.CAMERA );
+                const res = await PermissionsAndroid.requestMultiple( perms );
+                const camOk = !wantsVideo || res[ PermissionsAndroid.PERMISSIONS.CAMERA ] === PermissionsAndroid.RESULTS.GRANTED;
+                if ( !camOk && this.connle.callType ) {
+                    dbg( 'camera permission denied — answering audio-only' );
+                    this.connle.callType = { ...this.connle.callType, video: false };
+                }
+            }
+        } catch ( e ) {
+            dbg( 'permission request failed —', e && e.message );
+        }
+        this.connle.answer( ( ack ) => dbg( 'native answer ack:', ack && ack.code ) );
     }
 
     /** Called by connly._onPushIncoming: was Answer already tapped natively? */
