@@ -333,6 +333,10 @@ export default function App(): React.JSX.Element {
       }
       log(`localStreamAdded: ${d?.type}`);
     });
+    connleai.on('cameraSwitched', (d: any) => {
+      log(`cameraSwitched: ${safeStringify(d)}`);
+    });
+
     connleai.on('localStreamRemoved', (d: any) => {
       if (d?.type === 'video') setLocalVideoTrack(null);
       log(`localStreamRemoved: ${d?.type}`);

@@ -793,12 +793,12 @@ export default class Video {
     // Flip between the front and back camera ( React Native ). On web it falls
     // back to a facingMode track restart, which most laptops ignore (one camera).
     async switchCamera(_this) {
-        if (!this.isConnected()) {
-            this.emitError(_this, { code: 'NOT_CONNECTED', message: 'Not connected to call' });
-            return;
-        }
+        // Gate on what actually matters — a local participant with a camera
+        // track — not the connection flag: the answered->media window (call
+        // screen already up, media still joining) counts as connected=false
+        // and made the flip silently refuse mid-call-setup.
         if (!this.localParticipant) {
-            this.emitError(_this, { code: 'NO_CALL_ENABLED', message: 'No call enabled' });
+            this.emitError(_this, { code: 'NO_CALL_ENABLED', message: 'No active call to switch camera' });
             return;
         }
 
