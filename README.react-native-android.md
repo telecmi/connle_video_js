@@ -76,6 +76,31 @@ Without this one line every call join crashes with
 "Audio device module is not initialized". The JS side cannot do it for you —
 it must run in `Application.onCreate`.
 
+## 2b. MainActivity — lock-screen answering
+
+In `MainActivity.kt`, let an answered call open the app over the keyguard
+(manifest attributes alone are not enough on Samsung):
+
+```kotlin
+import android.app.KeyguardManager
+import android.content.Context
+import android.os.Build
+import android.os.Bundle
+
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager)
+            .requestDismissKeyguard(this, null)
+    }
+}
+```
+
+And on the `<activity>` in `AndroidManifest.xml`:
+`android:showWhenLocked="true" android:turnScreenOn="true"`.
+
 ## 2. Manifest permissions
 
 Your app's `AndroidManifest.xml` needs only the media/network set:
