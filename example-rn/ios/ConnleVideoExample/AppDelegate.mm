@@ -128,12 +128,12 @@ withCompletionHandler:(void (^)(void))completion
                           fromPushKit:YES
                               payload:payload.dictionaryPayload
                 withCompletionHandler:completion];
-    // Native ring-timeout backstop, a few seconds above the server's ringing
-    // TTL (45 s). iOS can park the JS thread after a background wake, so only
+    // Native ring-timeout backstop, just above the server's 35 s no-answer
+    // cancel. iOS can park the JS thread after a background wake, so only
     // a native timer is guaranteed to fire if the device also went offline.
     // 3 = CXCallEndedReasonUnanswered (logged as a missed call).
     NSString *ringUuid = [uuid copy];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(50 * NSEC_PER_SEC)),
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(40 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
       if (![RNCallKeep isCallActive:ringUuid]) {
         [RNCallKeep endCallWithUUID:ringUuid reason:3];
