@@ -841,15 +841,25 @@ export default class Video {
             if (_this) _this.emit('cameraSwitched', { facingMode: this.facingMode });
         };
 
-        // Android: react-native-webrtc's native in-place toggle is the path
-        // that actually flips — restartTrack's facingMode constraint is
-        // silently ignored by the Android capturer (track restarts on the
-        // same camera). iOS/web keep restartTrack first.
-        if (isReactNative) {
+        // React Native: flip through the SDK's media stack itself, by EXACT
+        // device id. The facingMode hint lets the capturer re-pick the same
+        // camera (observed: restart fires, camera unchanged), and the raw
+        // _switchCamera no-ops on this capture pipeline (observed: 'success'
+        // with no flip). Enumerating and restarting on the other camera's id
+        // is deterministic.
+        if (isReactNative && typeof track.restartTrack === 'function') {
             try {
-                const nativeTrack = track.mediaStreamTrack;
-                if (nativeTrack && typeof nativeTrack._switchCamera === 'function') {
-                    nativeTrack._switchCamera();
+                const all = await navigator.mediaDevices.enumerateDevices();
+                const cams = all.filter((d) => d.kind === 'videoinput');
+                const backNames = ['environment', 'back'];
+                const currentIsBack = this.facingMode === 'environment';
+                const target = cams.find((d) => {
+                    const f = String(d.facing || '').toLowerCase();
+                    const isBack = backNames.includes(f);
+                    return currentIsBack ? !isBack : isBack;
+                });
+                if (target) {
+                    await track.restartTrack({ deviceId: target.deviceId });
                     finish();
                     return;
                 }
