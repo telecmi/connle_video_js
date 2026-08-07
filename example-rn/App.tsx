@@ -301,7 +301,12 @@ export default function App(): React.JSX.Element {
       setCallState('active');
       setStatus('In call');
       log(`media connected: ${d?.user_id ?? ''}`);
-      if (callkitUuidRef.current && RNCallKeep) RNCallKeep.setCurrentCallActive(callkitUuidRef.current);
+      if (callkitUuidRef.current && RNCallKeep) {
+        RNCallKeep.setCurrentCallActive(callkitUuidRef.current);
+        // Telecom can start the native call MUTED (silences the mic system-
+        // wide even though the track publishes) — assert unmute.
+        try { RNCallKeep.setMutedCall(callkitUuidRef.current, false); } catch {}
+      }
     });
     connleai.on('disconnected', (d: any) => {
       resetCall();

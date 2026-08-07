@@ -825,6 +825,7 @@ export default class Video {
 
         const next = this.facingMode === 'environment' ? 'user' : 'environment';
         let lastError = null;
+        const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 
         const finish = () => {
             this.facingMode = next;
@@ -833,10 +834,25 @@ export default class Video {
             if (_this) _this.emit('cameraSwitched', { facingMode: this.facingMode });
         };
 
-        // Primary: livekit-client restartTrack with the opposite facing mode. It
-        // stops and re-acquires the camera with the new facing and republishes —
-        // the reliable cross-platform path (works on iOS where _switchCamera /
-        // applyConstraints can silently no-op).
+        // Android: react-native-webrtc's native in-place toggle is the path
+        // that actually flips — restartTrack's facingMode constraint is
+        // silently ignored by the Android capturer (track restarts on the
+        // same camera). iOS/web keep restartTrack first.
+        if (isReactNative) {
+            try {
+                const nativeTrack = track.mediaStreamTrack;
+                if (nativeTrack && typeof nativeTrack._switchCamera === 'function') {
+                    nativeTrack._switchCamera();
+                    finish();
+                    return;
+                }
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        // Primary (web/iOS): livekit-client restartTrack with the opposite
+        // facing mode — stops, re-acquires and republishes.
         if (typeof track.restartTrack === 'function') {
             try {
                 // facingMode only — don't pin a resolution, or a camera that can't

@@ -1,5 +1,9 @@
 package com.connlevideoexample
 
+import android.app.KeyguardManager
+import android.content.Context
+import android.os.Build
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +16,20 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "ConnleVideoExample"
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    // Answering a call from the lock screen must bring THIS activity up over
+    // the keyguard with the screen on. The manifest attributes alone are not
+    // enough on Samsung — set the flags at runtime and ask the keyguard to
+    // step aside (no-op when the device is unlocked).
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+      setShowWhenLocked(true)
+      setTurnScreenOn(true)
+      val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+      km.requestDismissKeyguard(this, null)
+    }
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
