@@ -21,7 +21,7 @@ declare module 'connle-video-sdk' {
       mediaURL?: string,
       options?: {
         autoPush?: boolean;
-        push?: {apiBase?: string; registerPath?: string; unregisterPath?: string};
+        push?: {apiBase?: string};
       },
     );
 

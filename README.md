@@ -16,8 +16,9 @@ Two packages, one API (same model as the PIOPIY voice SDK):
 | Platform | Package | Setup guide |
 | :--- | :--- | :--- |
 | 🌐 **Web & Electron** | `@telecmi/connle-video` | **→ [Web & Electron guide](README.web.md)** |
-| 📱 **React Native iOS** | `@telecmi/connle-video-native` | **→ [iOS guide](README.react-native-ios.md)** |
-| 🤖 **React Native Android** | `@telecmi/connle-video-native` | **→ [Android guide](README.react-native-android.md)** |
+| 📱 **React Native (iOS & Android)** | `@telecmi/connle-video-native` | **→ [React Native guide](README.react-native.md)** |
+| 🍎 **iOS native setup** | | → [iOS guide](README.react-native-ios.md) |
+| 🤖 **Android native setup** | | → [Android guide](README.react-native-android.md) |
 
 ```bash
 # Browser / Electron
@@ -103,7 +104,7 @@ connle.connect();
 | `serverUrl` | Signalling WebSocket URL (e.g. `wss://signal.connle.com`). | string | ✅ |
 | `token` | Auth token that identifies the connecting user. | string | ✅ |
 | `mediaUrl` | Media server WebSocket URL (e.g. `wss://sfu.connle.com`). Uses the default if omitted. | string | optional |
-| `options` | 📱 React Native only — push behavior: `{autoPush, push: {apiBase, registerPath, unregisterPath}}`. See the [React Native guide](README.react-native.md#react-nativeonly-api). | object | optional |
+| `options` | 📱 React Native only — push behavior: `{autoPush, push: {apiBase}}`. See the [React Native guide](README.react-native.md#react-nativeonly-api). | object | optional |
 
 ---
 

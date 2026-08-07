@@ -76,8 +76,6 @@ const connle = new ConnleVideo(serverUrl, token, mediaUrl, {
   autoPush: true,                       // set false to disable push entirely
   push: {
     apiBase: 'https://api.connle.com',  // TeleCMI REST base (override for staging)
-    registerPath: '/video/push/register',
-    unregisterPath: '/video/push/unregister',
   },
 });
 ```
@@ -86,7 +84,6 @@ const connle = new ConnleVideo(serverUrl, token, mediaUrl, {
 | :--- | :--- | :--- |
 | `autoPush` | `true` | Fetch the device push token and register it automatically on every successful `connect()`. |
 | `push.apiBase` | production REST | Where the token is registered. |
-| `push.registerPath` / `push.unregisterPath` | shown above | Endpoint paths, overridable per environment. |
 
 ### `unregisterPush(callback)`
 

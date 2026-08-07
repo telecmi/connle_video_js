@@ -196,7 +196,7 @@ export default class ConnlePush {
 
     /**
      * @param {object} connle  the Connle instance (uses .token as the bearer)
-     * @param {object} [opts]  { apiBase, registerPath, unregisterPath }
+     * @param {object} [opts]  { apiBase }
      */
     constructor( connle, opts ) {
         this.connle = connle;
@@ -489,7 +489,7 @@ export default class ConnlePush {
     // POST the token to TeleCMI REST (same REST as voice, video endpoint).
     _register( info, attempt ) {
         const base = ( this.opts.apiBase || DEFAULT_API_BASE ).replace( /\/+$/, '' );
-        const path = this.opts.registerPath || DEFAULT_REGISTER_PATH;
+        const path = DEFAULT_REGISTER_PATH;
         const url = base + path;
         const body = JSON.stringify( { token: info.token, provider: info.provider, platform: info.platform } );
         dbg( 'registering', info.provider, String( info.token ).slice( 0, 10 ) + '… → ' + url );
@@ -524,7 +524,7 @@ export default class ConnlePush {
         const done = ( r ) => { if ( typeof callback === 'function' ) callback( r ); };
         if ( !this.registered ) return done( { code: 200, status: 'no token registered' } );
         const base = ( this.opts.apiBase || DEFAULT_API_BASE ).replace( /\/+$/, '' );
-        const url = base + ( this.opts.unregisterPath || DEFAULT_UNREGISTER_PATH );
+        const url = base + DEFAULT_UNREGISTER_PATH;
         const xhr = new XMLHttpRequest();
         xhr.open( 'POST', url, true );
         xhr.setRequestHeader( 'Content-Type', 'application/json;charset=UTF-8' );
