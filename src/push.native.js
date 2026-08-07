@@ -298,9 +298,15 @@ export default class ConnlePush {
         }
     }
 
-    /** The app answered this call — the ring backstop must not kill it. */
+    /** The app answered this call — the ring backstop must not kill it, and
+     *  the multi-device dismissal cancel (sent to ALL the user's devices,
+     *  including this one) must be ignored here. */
     markAnswered( call_id ) {
-        if ( this._ringTimers && call_id ) {
+        if ( !call_id ) return;
+        this._answeredIds = this._answeredIds || [];
+        this._answeredIds.push( String( call_id ) );
+        if ( this._answeredIds.length > 20 ) this._answeredIds.shift();
+        if ( this._ringTimers ) {
             clearTimeout( this._ringTimers[ String( call_id ) ] );
             delete this._ringTimers[ String( call_id ) ];
         }
@@ -397,6 +403,12 @@ export default class ConnlePush {
         }
         try {
             if ( data.type === 'video_cancel' ) {
+                // Answered HERE: this cancel is the multi-device dismissal for
+                // the sibling devices — not for us. Never end a live call.
+                if ( data.call_id && this._answeredIds && this._answeredIds.includes( String( data.call_id ) ) ) {
+                    dbg( 'cancel ignored — call answered on this device:', data.call_id );
+                    return;
+                }
                 if ( this._ringTimers && data.call_id ) {
                     clearTimeout( this._ringTimers[ String( data.call_id ) ] );
                     delete this._ringTimers[ String( data.call_id ) ];

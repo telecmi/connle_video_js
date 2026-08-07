@@ -97,6 +97,30 @@ withCompletionHandler:(void (^)(void))completion
   });
 
   if (isCancel) {
+    // Multi-device dismissal: the cancel goes to ALL of the user's devices —
+    // if THIS device already answered (call is active), the cancel is meant
+    // for the siblings only. Apple still requires reporting a call for every
+    // VoIP push, so report a throwaway uuid and end it, leaving the live
+    // call untouched.
+    if ([RNCallKeep isCallActive:uuid]) {
+      NSString *dummy = [[NSUUID UUID] UUIDString];
+      [RNCallKeep reportNewIncomingCall:dummy
+                                 handle:caller
+                             handleType:@"generic"
+                               hasVideo:NO
+                    localizedCallerName:callerDisplay
+                        supportsHolding:YES
+                           supportsDTMF:NO
+                       supportsGrouping:NO
+                     supportsUngrouping:NO
+                            fromPushKit:YES
+                                payload:payload.dictionaryPayload
+                  withCompletionHandler:^{
+        [RNCallKeep endCallWithUUID:dummy reason:2];
+        completion();
+      }];
+      return;
+    }
     // Report (iOS 13+ requires it for EVERY VoIP push) then end inside the
     // completion, dismissing the still-ringing call of the same uuid.
     // 2 = CXCallEndedReasonRemoteEnded.
