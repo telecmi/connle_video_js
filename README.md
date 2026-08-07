@@ -54,7 +54,7 @@ import ConnleVideo from '@telecmi/connle-video';
 const connle = new ConnleVideo(
   'wss://signal.connle.com', // signalling URL
   '<YOUR_TOKEN>',            // auth token (identifies this user)
-  'wss://sfu.connle.com'     // media / SFU URL (optional)
+  'wss://sfu.connle.com'     // media server URL (optional)
 );
 
 // 2. Signalling callbacks
@@ -102,7 +102,7 @@ connle.connect();
 | :--- | :--- | :--- | :--- |
 | `serverUrl` | Signalling WebSocket URL (e.g. `wss://signal.connle.com`). | string | ✅ |
 | `token` | Auth token that identifies the connecting user. | string | ✅ |
-| `mediaUrl` | Media / SFU WebSocket URL (e.g. `wss://sfu.connle.com`). Uses the default if omitted. | string | optional |
+| `mediaUrl` | Media server WebSocket URL (e.g. `wss://sfu.connle.com`). Uses the default if omitted. | string | optional |
 
 ---
 

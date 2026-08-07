@@ -20,7 +20,7 @@ video calls.
 - **HTTPS.** Browsers only grant camera/microphone access (`getUserMedia`) on a
   **secure origin**: `https://…` in production, or `http://localhost` during
   development. (Electron apps using `file://` or custom schemes are exempt.)
-- A Connle **token**, signalling URL, and media (SFU) URL.
+- A Connle **token**, signalling URL, and media server URL.
 
 ---
 

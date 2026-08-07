@@ -16,7 +16,7 @@ audio & video calls.
 - A **physical iOS device** is strongly recommended — the **iOS Simulator cannot**
   capture the camera/microphone for WebRTC. Always verify on real hardware.
 - macOS with **Xcode 16+** and **CocoaPods**.
-- A Connle **token**, signalling URL, and media (SFU) URL.
+- A Connle **token**, signalling URL, and media server URL.
 
 ---
 

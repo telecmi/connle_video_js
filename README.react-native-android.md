@@ -15,7 +15,7 @@ audio & video calls.
 - **Node 20+** and **JDK 17**.
 - **Android Studio** / Android SDK. A real device is best; the emulator can use
   your computer's camera/mic for basic testing.
-- A Connle **token**, signalling URL, and media (SFU) URL.
+- A Connle **token**, signalling URL, and media server URL.
 
 ---
 
