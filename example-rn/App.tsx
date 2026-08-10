@@ -364,16 +364,8 @@ export default function App(): React.JSX.Element {
       log('RNCallKeep native module missing — REBUILD the app from Xcode (old binary); CallKit disabled, in-app ringing only');
       return;
     }
-    RNCallKeep.setup({
-      ios: {appName: 'ConnleVideoExample', supportsVideo: true},
-      android: {
-        alertTitle: 'Permissions required',
-        alertDescription: 'This app needs phone-account access for calls',
-        cancelButton: 'Cancel',
-        okButton: 'OK',
-        additionalPermissions: [],
-      },
-    }).catch(() => {});
+    // CallKeep setup is owned by the SDK (self-managed account) — a second
+    // setup here with different options corrupts the persisted phone account.
 
     // Answer/End taps on the native screen are handled INSIDE the SDK (it
     // answers/rejects and brings the app forward on Android). The app only
