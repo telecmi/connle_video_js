@@ -33,6 +33,13 @@ public class ConnleVideoInitProvider extends ContentProvider {
             // Never take the app down from an init provider.
             Log.w(TAG, "LiveKit auto-init failed: " + t);
         }
+        try {
+            // Purge orphaned incoming-call notifications (ongoing +
+            // process-death mid-ring = stuck forever otherwise).
+            Class<?> notif = Class.forName("io.wazo.callkeep.IncomingCallNotification");
+            notif.getMethod("cancelAll", Context.class)
+                 .invoke(null, context.getApplicationContext());
+        } catch (Throwable ignored) { }
         return true;
     }
 
