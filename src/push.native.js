@@ -160,12 +160,12 @@ function loadCallKeep() {
                     cancelButton: 'Cancel',
                     okButton: 'OK',
                     additionalPermissions: [],
-                    // WhatsApp model: NO system call screen, ever — the SDK's
-                    // own CallStyle notification rings, the app is the in-call
-                    // UI. Kills the Samsung ongoing-call bubble and the system
-                    // in-call activity taking over after answer. (Requires the
-                    // bundled callkeep >= 4.3.19.)
-                    selfManaged: true,
+                    // Managed Telecom: the system's full-screen call UI rings
+                    // (the classic callkeep experience); after answer the SDK
+                    // brings the app to the foreground. Self-managed (WhatsApp
+                    // model — no system UI, SDK's own CallStyle notification,
+                    // fork >= 4.3.19) is one line away: selfManaged: true.
+                    selfManaged: false,
                     // Native OS-side ring timeout (fork >= 4.3.18): survives the
                     // headless JS context AND total network loss — the ring can
                     // never outlive the server's 35s no-answer window by much.
