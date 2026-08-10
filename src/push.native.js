@@ -153,7 +153,7 @@ function loadCallKeep() {
         _callKeepSetup = true;
         try {
             const setupPromise = _callKeep.setup( {
-                ios: { appName: 'Connle' },
+                ios: { appName: 'Connle', supportsVideo: true },
                 android: {
                     alertTitle: 'Permissions required',
                     alertDescription: 'This application needs phone-account access to show incoming calls',
@@ -267,18 +267,18 @@ export default class ConnlePush {
         if ( this.connle.callType ) {
             this.connle.callType = await this.ensureMediaPermissions( this.connle.callType );
         }
-        // Media-aware foregrounding (Android): a VIDEO call's UI is the app —
-        // surface it immediately and again after the Telecom transition
-        // settles. An AUDIO call stays on the system call screen, exactly
-        // like a phone call (the user opens the app if they want it).
-        const isVideo = !!( this.connle.callType && this.connle.callType.video );
+        // Surface the app after EVERY answer (Android): in a video-calling
+        // product the app IS the call UI, audio calls included — immediately,
+        // and once more after the Telecom transition settles. (iOS: CallKit
+        // itself opens the app when a call reported hasVideo is answered;
+        // audio answers stay on the CallKit screen — OS behavior, no API.)
         const ck = Platform.OS === 'android' ? loadCallKeep() : null;
-        if ( ck && isVideo ) {
+        if ( ck ) {
             try { ck.backToForeground(); } catch { /* ignore */ }
         }
         this.connle.answer( ( ack ) => {
             dbg( 'native answer ack:', ack && ack.code );
-            if ( ck && isVideo && ack && ack.code === 200 ) {
+            if ( ck && ack && ack.code === 200 ) {
                 setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 800 );
             }
         } );
