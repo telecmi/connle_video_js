@@ -431,14 +431,19 @@ export default class ConnlePush {
         return media;
     }
 
-    /** Called by connly._onPushIncoming: was Answer already tapped natively? */
+    /** Called by connly._onPushIncoming: was Answer already tapped natively?
+     *  Consumes ONLY when the session is live — on a cold start the invite is
+     *  flushed before the socket connects, and answering then would throw the
+     *  tap away (NOT_CONNECTED). Kept parked, onConnected() completes it. */
     consumePendingAnswer( call_id ) {
         const uuid = String( call_id || '' ).toLowerCase();
-        if ( uuid && this._pendingNativeAnswer === uuid ) {
-            this._pendingNativeAnswer = null;
-            return true;
+        if ( !uuid || this._pendingNativeAnswer !== uuid ) return false;
+        if ( !this.connle.isConnected ) {
+            dbg( 'answer stays parked — session not live yet:', uuid );
+            return false;
         }
-        return false;
+        this._pendingNativeAnswer = null;
+        return true;
     }
 
     /** Start receiving video-call pushes and register the device token. */
