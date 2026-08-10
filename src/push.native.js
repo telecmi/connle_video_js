@@ -264,7 +264,7 @@ function _handleColdPush( raw ) {
         const hasVideo = !!( data.media && data.media.video );
         const caller = data.from_name || data.from || 'Incoming call';
         try {
-            ck.displayIncomingCall( String( data.call_id ), String( data.from || 'unknown' ), caller, 'generic', hasVideo );
+            ck.displayIncomingCall( String( data.call_id ), caller, caller, 'generic', hasVideo );
             dbg( 'cold-start native ring for', data.call_id );
         } catch ( e ) {
             dbg( 'cold displayIncomingCall failed —', e && e.message );
@@ -716,7 +716,10 @@ export default class ConnlePush {
                     const hasVideo = !!( data.media && typeof data.media === 'object' && data.media.video );
                     const caller = data.from_name || data.from || 'Incoming call';
                     try {
-                        ck.displayIncomingCall( String( data.call_id ), String( data.from || 'unknown' ), caller, 'generic', hasVideo );
+                        // handle = display name too: Android's system call UI
+                        // features the HANDLE as the big line — passing the raw
+                        // user id there showed a UUID instead of the caller.
+                        ck.displayIncomingCall( String( data.call_id ), caller, caller, 'generic', hasVideo );
                         dbg( 'native Android ring for', data.call_id );
                         // Ring-timeout backstop (a few seconds above the
                         // server's 45s ringing TTL): if the cancel push gets
