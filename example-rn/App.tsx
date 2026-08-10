@@ -365,6 +365,13 @@ export default function App(): React.JSX.Element {
       const uuid = String(callUUID).toLowerCase();
       log(`native answer observed: ${uuid}`);
       callkitUuidRef.current = uuid;
+      // The user answered on the NATIVE screen — the in-app banner must not
+      // keep offering Answer/Reject for the same call.
+      const inc = incomingRef.current;
+      if (inc && String(inc.call_id ?? '').toLowerCase() === uuid) {
+        setCallState('active');
+        setStatus('Answered — connecting media…');
+      }
     });
 
     RNCallKeep.addEventListener('endCall', ({callUUID}: {callUUID: string}) => {
