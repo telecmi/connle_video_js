@@ -160,6 +160,12 @@ function loadCallKeep() {
                     cancelButton: 'Cancel',
                     okButton: 'OK',
                     additionalPermissions: [],
+                    // WhatsApp model: NO system call screen, ever — the SDK's
+                    // own CallStyle notification rings, the app is the in-call
+                    // UI. Kills the Samsung ongoing-call bubble and the system
+                    // in-call activity taking over after answer. (Requires the
+                    // bundled callkeep >= 4.3.19.)
+                    selfManaged: true,
                     // Native OS-side ring timeout (fork >= 4.3.18): survives the
                     // headless JS context AND total network loss — the ring can
                     // never outlive the server's 35s no-answer window by much.
@@ -368,6 +374,16 @@ export default class ConnlePush {
         return true;
     }
 
+    // Android 13+: the self-managed ring is a notification — without this
+    // runtime grant the phone stays silent on incoming calls.
+    async _ensureNotificationPermission() {
+        if ( Platform.OS !== 'android' ) return;
+        try {
+            const perm = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
+            if ( perm ) await PermissionsAndroid.request( perm );
+        } catch { /* ignore */ }
+    }
+
     // Nobody else fetched a token — this SDK is alone: own the OS APIs.
     _claimAlone( router ) {
         try {
@@ -379,6 +395,7 @@ export default class ConnlePush {
 
     _claimAloneInner( router ) {
         if ( Platform.OS === 'android' ) {
+            this._ensureNotificationPermission();
             const messaging = loadMessaging();
             if ( !messaging ) return;
             messaging.getToken()
