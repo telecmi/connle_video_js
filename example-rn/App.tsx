@@ -248,6 +248,19 @@ export default function App(): React.JSX.Element {
     connleai.onIncomingCall((d: any) => {
       const from = d?.from_name ?? d?.from ?? d?.userid ?? d?.user_id ?? d?.caller ?? 'Unknown';
       const hasVideo = mediaHasVideo(d?.media);
+      // Push-delivered calls ring on the NATIVE call UI — showing our own
+      // banner too means two competing incoming screens (WhatsApp shows one).
+      // Track the call, show status, but let the native surface own the ring.
+      if (d?.transport === 'push') {
+        setIncoming(d);
+        setPeerId(String(from));
+        setCallHasVideo(hasVideo);
+        setStatus(`Incoming ${hasVideo ? 'video' : 'audio'} call from ${from} — ringing natively`);
+        log(`onIncomingCall (native ring): ${safeStringify(d)}`);
+        const cid0 = String(d?.call_id ?? '').toLowerCase();
+        if (cid0) callkitUuidRef.current = cid0;
+        return;
+      }
       setCallState('incoming');
       setIncoming(d);
       setPeerId(String(from));
