@@ -395,6 +395,10 @@ export default class ConnlePush {
         try { ck.setCurrentCallActive( uuid ); } catch { /* ignore */ }
         if ( Platform.OS === 'android' ) {
             try { ck.setMutedCall( uuid, false ); } catch { /* ignore */ }
+            // Show the app over the keyguard ONLY while in a call — a
+            // permanent flag makes any screen-wake reveal the app instead of
+            // the lock screen's ring notification.
+            try { if ( typeof ck.setActivityShowWhenLocked === 'function' ) ck.setActivityShowWhenLocked( true ); } catch { /* ignore */ }
         }
     }
 
@@ -404,6 +408,9 @@ export default class ConnlePush {
         const ck = loadCallKeep();
         if ( !ck || !call_id ) return;
         try { ck.reportEndCallWithUUID( String( call_id ), 2 ); } catch { /* ignore */ }
+        if ( Platform.OS === 'android' ) {
+            try { if ( typeof ck.setActivityShowWhenLocked === 'function' ) ck.setActivityShowWhenLocked( false ); } catch { /* ignore */ }
+        }
         if ( this._ringTimers ) {
             clearTimeout( this._ringTimers[ String( call_id ) ] );
             delete this._ringTimers[ String( call_id ) ];
