@@ -202,7 +202,39 @@ function loadCallKeep() {
 // — including the very push meant to wake a killed app. Importing the SDK is
 // enough; no instance needs to exist yet.
 // ---------------------------------------------------------------------------
-let _coldPending = null; // video_call that arrived before any SDK instance
+let _coldPending = null;      // video_call that arrived before any SDK instance
+let _coldAnswer = null;       // Answer tapped on that cold ring, before any instance
+let _coldEventsWired = false;
+
+// Cold-context native events: with NO SDK instance (killed-app headless), an
+// Answer tap must still launch the app and be remembered — the instance picks
+// it up the moment the app starts.
+function _wireColdNativeEvents( ck ) {
+    if ( _coldEventsWired || !ck ) return;
+    _coldEventsWired = true;
+    try {
+        ck.addEventListener( 'answerCall', ( ev ) => {
+            const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
+            if ( !uuid || !_coldPending ) return; // only relevant in the cold phase
+            if ( String( _coldPending.call_id ).toLowerCase() !== uuid ) return;
+            dbg( 'cold answer parked:', uuid );
+            _coldAnswer = uuid;
+            if ( Platform.OS === 'android' ) {
+                try { ck.backToForeground(); } catch { /* ignore */ }
+            }
+        } );
+        ck.addEventListener( 'endCall', ( ev ) => {
+            const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
+            if ( !uuid || !_coldPending ) return;
+            if ( String( _coldPending.call_id ).toLowerCase() !== uuid ) return;
+            dbg( 'cold decline:', uuid );
+            _coldPending = null;
+            _coldAnswer = null;
+        } );
+    } catch ( e ) {
+        dbg( 'cold event wiring failed —', e && e.message );
+    }
+}
 
 function _normalizePayload( raw ) {
     const data = { ...( raw || {} ) };
@@ -221,13 +253,14 @@ function _handleColdPush( raw ) {
     if ( !data || !data.call_id ) return;
     const ck = loadCallKeep();
     if ( data.type === 'video_cancel' ) {
-        if ( _coldPending && String( _coldPending.call_id ) === String( data.call_id ) ) _coldPending = null;
+        if ( _coldPending && String( _coldPending.call_id ) === String( data.call_id ) ) { _coldPending = null; _coldAnswer = null; }
         if ( ck ) { try { ck.reportEndCallWithUUID( String( data.call_id ), 2 ); } catch { /* ignore */ } }
         return;
     }
     if ( data.type !== 'video_call' ) return;
     _coldPending = data;
     if ( ck ) {
+        _wireColdNativeEvents( ck );
         const hasVideo = !!( data.media && data.media.video );
         const caller = data.from_name || data.from || 'Incoming call';
         try {
@@ -428,6 +461,11 @@ export default class ConnlePush {
         if ( _coldPending ) {
             const cold = _coldPending;
             _coldPending = null;
+            if ( _coldAnswer ) {
+                dbg( 'carrying cold answer into instance:', _coldAnswer );
+                this._pendingNativeAnswer = _coldAnswer;
+                _coldAnswer = null;
+            }
             setTimeout( () => this._onPush( { ...cold, _alreadyRang: true } ), 0 );
         }
 
