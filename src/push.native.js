@@ -194,6 +194,68 @@ function loadCallKeep() {
     return _callKeep;
 }
 
+// ---------------------------------------------------------------------------
+// Android background pushes — registered at MODULE LOAD, not at instance
+// start. RNFirebase spawns its headless task the moment a background push
+// arrives; if nothing registered the task during bundle evaluation, the push
+// is DROPPED ("No task registered for key ReactNativeFirebaseMessagingHeadlessTask")
+// — including the very push meant to wake a killed app. Importing the SDK is
+// enough; no instance needs to exist yet.
+// ---------------------------------------------------------------------------
+let _coldPending = null; // video_call that arrived before any SDK instance
+
+function _normalizePayload( raw ) {
+    const data = { ...( raw || {} ) };
+    if ( !data.from && data.caller ) data.from = data.caller;
+    if ( typeof data.media === 'string' ) {
+        try { data.media = JSON.parse( data.media ); } catch { /* keep */ }
+    }
+    return data;
+}
+
+// Ring/dismiss natively with NO SDK instance (headless cold start): the app
+// process was just spawned for this push — show the native call UI now; the
+// call itself is completed once the app runs and the instance picks it up.
+function _handleColdPush( raw ) {
+    const data = _normalizePayload( raw );
+    if ( !data || !data.call_id ) return;
+    const ck = loadCallKeep();
+    if ( data.type === 'video_cancel' ) {
+        if ( _coldPending && String( _coldPending.call_id ) === String( data.call_id ) ) _coldPending = null;
+        if ( ck ) { try { ck.reportEndCallWithUUID( String( data.call_id ), 2 ); } catch { /* ignore */ } }
+        return;
+    }
+    if ( data.type !== 'video_call' ) return;
+    _coldPending = data;
+    if ( ck ) {
+        const hasVideo = !!( data.media && data.media.video );
+        const caller = data.from_name || data.from || 'Incoming call';
+        try {
+            ck.displayIncomingCall( String( data.call_id ), String( data.from || 'unknown' ), caller, 'generic', hasVideo );
+            dbg( 'cold-start native ring for', data.call_id );
+        } catch ( e ) {
+            dbg( 'cold displayIncomingCall failed —', e && e.message );
+        }
+    }
+}
+
+( function registerBackgroundHandlerEarly() {
+    if ( Platform.OS !== 'android' ) return;
+    const messaging = loadMessaging();
+    if ( !messaging ) return;
+    try {
+        messaging.setBackgroundMessageHandler( async ( msg ) => {
+            const data = ( msg && msg.data ) || null;
+            const router = getPushRouter();
+            if ( router.dispatch( data ) ) return; // an SDK instance is alive
+            _handleColdPush( data );               // headless: ring natively now
+        } );
+        dbg( 'background push handler registered (module load)' );
+    } catch ( e ) {
+        dbg( 'early background handler failed —', e && e.message );
+    }
+} )();
+
 const DEFAULT_API_BASE = 'https://api.connle.com';
 const DEFAULT_REGISTER_PATH = '/video/push/register';
 const DEFAULT_UNREGISTER_PATH = '/video/push/unregister';
@@ -360,6 +422,15 @@ export default class ConnlePush {
         // the CallKit / ConnectionService screen drive the SDK directly).
         this._wireNativeCallEvents( loadCallKeep() );
 
+        // A push rang the device before this instance existed (cold start):
+        // run it through the normal pipeline now — prepares the call so a
+        // parked native Answer completes, without re-ringing (already shown).
+        if ( _coldPending ) {
+            const cold = _coldPending;
+            _coldPending = null;
+            setTimeout( () => this._onPush( { ...cold, _alreadyRang: true } ), 0 );
+        }
+
         // Token: prefer the one another TeleCMI SDK already fetched (same
         // device = same token); fetch ourselves only if nobody publishes one.
         let sawSharedToken = false;
@@ -411,11 +482,7 @@ export default class ConnlePush {
                 this._onDeviceToken( info );
             } );
             messaging.onMessage( ( msg ) => router.dispatch( ( msg && msg.data ) || null ) );
-            try {
-                messaging.setBackgroundMessageHandler( async ( msg ) => router.dispatch( ( msg && msg.data ) || null ) );
-            } catch ( e ) {
-                dbg( 'background handler setup failed —', e && e.message );
-            }
+            // Background handler is registered at module load (headless-safe).
         } else if ( Platform.OS === 'ios' ) {
             const VoipPush = loadVoipPush();
             if ( !VoipPush ) {
@@ -599,7 +666,7 @@ export default class ConnlePush {
             // Android: ring the native ConnectionService UI — works in every
             // app state, including the background handler. (iOS rings from the
             // AppDelegate's CallKit report; JS only mirrors state there.)
-            if ( Platform.OS === 'android' && data.call_id ) {
+            if ( Platform.OS === 'android' && data.call_id && !data._alreadyRang ) {
                 const ck = loadCallKeep();
                 if ( ck ) {
                     this._wireNativeCallEvents( ck );
