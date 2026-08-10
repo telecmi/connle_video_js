@@ -1,7 +1,7 @@
 {
   "name": "@telecmi/connle-video",
   "title": "Connle Video SDK for Web, Electron, and React Native",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official Connle video SDK for the browser \u2014 high-quality video/audio calls with the same API as React Native.",
   "main": "lib/index.js",
   "types": "index.d.ts",
@@ -47,7 +47,7 @@
     "webpack-dev-server": "^5.1.0"
   },
   "dependencies": {
-    "livekit-client": "^2.15.0",
+    "livekit-client": "~2.11.2",
     "socket.io-client": "^4.8.0"
   },
   "publishConfig": {
