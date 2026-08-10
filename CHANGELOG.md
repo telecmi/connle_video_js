@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-08-07
+
+### Fixed
+- **Video negotiation failed in apps built from the published package** ("NegotiationError: negotiation timed out" when enabling video). 1.0.0 declared `livekit-client ^2.15.0`, but the production media server requires the 2.11 line — fresh installs pulled 2.15 and renegotiation timed out. Pinned back to the tested `~2.11.2` (development setups always ran 2.11, which is why the issue only appeared in released builds).
+
 ## [1.0.0] - 2026-08-07
 
 First stable release — device-verified end to end on iOS and Android.
