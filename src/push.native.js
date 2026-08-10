@@ -397,8 +397,10 @@ export default class ConnlePush {
             try { ck.setMutedCall( uuid, false ); } catch { /* ignore */ }
             // Show the app over the keyguard ONLY while in a call — a
             // permanent flag makes any screen-wake reveal the app instead of
-            // the lock screen's ring notification.
+            // the lock screen's ring notification. Setting the flag alone
+            // does not surface an occluded activity: relaunch right after.
             try { if ( typeof ck.setActivityShowWhenLocked === 'function' ) ck.setActivityShowWhenLocked( true ); } catch { /* ignore */ }
+            setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 250 );
         }
     }
 
