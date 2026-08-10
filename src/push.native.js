@@ -323,6 +323,25 @@ export default class ConnlePush {
                 dbg( 'native answer:', uuid );
                 this._handleNativeAnswer( uuid );
             } );
+            // iOS: CallKit activates the audio session on answer — WebRTC must
+            // be told, or answered CallKit calls can be silent (the classic
+            // failure). Official LiveKit RN guidance: forward both events.
+            if ( Platform.OS === 'ios' ) {
+                let rtcAudioSession = null;
+                try {
+                    const webrtc = require( '@livekit/react-native-webrtc' );
+                    rtcAudioSession = ( webrtc && webrtc.RTCAudioSession ) || null;
+                } catch { /* ignore */ }
+                if ( rtcAudioSession ) {
+                    ck.addEventListener( 'didActivateAudioSession', () => {
+                        try { rtcAudioSession.audioSessionDidActivate(); } catch { /* ignore */ }
+                    } );
+                    ck.addEventListener( 'didDeactivateAudioSession', () => {
+                        try { rtcAudioSession.audioSessionDidDeactivate(); } catch { /* ignore */ }
+                    } );
+                }
+            }
+
             ck.addEventListener( 'endCall', ( ev ) => {
                 const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
                 if ( !uuid ) return;

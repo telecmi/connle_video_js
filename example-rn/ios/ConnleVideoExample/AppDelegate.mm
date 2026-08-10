@@ -5,11 +5,16 @@
 #import "RNVoipPushNotificationManager.h"
 #import "RNCallKeep.h"
 #import <PushKit/PushKit.h>
+#import "LivekitReactNative.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  // Official LiveKit RN requirement: initialize the media engine BEFORE any
+  // React Native initialization.
+  [LivekitReactNative setup];
+
   self.moduleName = @"ConnleVideoExample";
   // You can add your custom initial props in the dictionary below.
   // They will be passed down to the ViewController used by React Native.
