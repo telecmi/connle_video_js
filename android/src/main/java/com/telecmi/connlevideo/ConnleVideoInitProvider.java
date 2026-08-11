@@ -40,6 +40,16 @@ public class ConnleVideoInitProvider extends ContentProvider {
             notif.getMethod("cancelAll", Context.class)
                  .invoke(null, context.getApplicationContext());
         } catch (Throwable ignored) { }
+        try {
+            // Purge zombie Telecom calls BEFORE the ConnectionService can
+            // rebind: a call orphaned by process death re-asserts its ring the
+            // moment the service comes back and its stale full-screen UI then
+            // hijacks the next real answer. At process start any Telecom call
+            // on our account is by definition a zombie.
+            Class<?> callkeep = Class.forName("io.wazo.callkeep.RNCallKeepModule");
+            callkeep.getMethod("purgeZombieTelecomAccount", Context.class)
+                    .invoke(null, context.getApplicationContext());
+        } catch (Throwable ignored) { }
         return true;
     }
 

@@ -204,7 +204,27 @@ function loadCallKeep() {
 // ---------------------------------------------------------------------------
 let _coldPending = null;      // video_call that arrived before any SDK instance
 let _coldAnswer = null;       // Answer tapped on that cold ring, before any instance
+let _coldAnswerAt = 0;        // when that tap happened (stale taps must die)
 let _coldEventsWired = false;
+
+// FCM redelivers undelivered data messages for DAYS (device offline, process
+// dead, push channel wedged). A call invite older than the server's ~35 s
+// no-answer window can never be answered — ringing it creates a ghost call
+// whose stale UI hijacks the next real answer.
+const MAX_RING_PUSH_AGE_MS = 45000;
+// A parked Answer tap older than this belongs to a call the server has long
+// since timed out; completing it can only produce call_mismatch errors.
+const MAX_PARKED_ANSWER_AGE_MS = 60000;
+
+function _isStaleRing( msg, data ) {
+    if ( !data || data.type !== 'video_call' ) return false; // cancels are idempotent
+    const sent = Number( msg && msg.sentTime );
+    if ( !sent ) return false; // no timestamp — can't judge, let it ring
+    const age = Date.now() - sent;
+    if ( age <= MAX_RING_PUSH_AGE_MS ) return false;
+    dbg( 'stale video_call push dropped (age ' + Math.round( age / 1000 ) + 's):', data && data.call_id );
+    return true;
+}
 
 // Cold-context native events: with NO SDK instance (killed-app headless), an
 // Answer tap must still launch the app and be remembered — the instance picks
@@ -219,6 +239,7 @@ function _wireColdNativeEvents( ck ) {
             if ( String( _coldPending.call_id ).toLowerCase() !== uuid ) return;
             dbg( 'cold answer parked:', uuid );
             _coldAnswer = uuid;
+            _coldAnswerAt = Date.now();
             if ( Platform.OS === 'android' ) {
                 try { ck.backToForeground(); } catch { /* ignore */ }
             }
@@ -279,6 +300,7 @@ function _handleColdPush( raw ) {
     try {
         messaging.setBackgroundMessageHandler( async ( msg ) => {
             const data = ( msg && msg.data ) || null;
+            if ( _isStaleRing( msg, data ) ) return; // FCM retry of a dead call
             const router = getPushRouter();
             if ( router.dispatch( data ) ) return; // an SDK instance is alive
             _handleColdPush( data );               // headless: ring natively now
@@ -306,6 +328,7 @@ export default class ConnlePush {
         this.deviceToken = null;   // { token, provider, platform }
         this.registered = null;    // last token successfully registered
         this._pendingNativeAnswer = null; // Answer tapped before the invite reached JS
+        this._pendingNativeAnswerAt = 0;  // park time — stale parks must expire
         this._nativeEventsWired = false;
     }
 
@@ -367,6 +390,17 @@ export default class ConnlePush {
             // the invite arrives OR by onConnected() when the socket is back.
             dbg( 'native answer parked (invite/socket not ready):', uuid );
             this._pendingNativeAnswer = uuid;
+            this._pendingNativeAnswerAt = Date.now();
+            // The RN host is paused while a native activity (the in-call
+            // shell) is frontmost, so JS timers — including socket.io's
+            // reconnect timer — are FROZEN and a dropped socket would stay
+            // down until the server times the call out. Kick a fresh connect
+            // NOW (the initial attempt is not timer-driven); onConnected()
+            // completes this park.
+            if ( !this.connle.isConnected && this.connle.token ) {
+                dbg( 'socket down at answer — forcing reconnect' );
+                try { this.connle.connect(); } catch { /* ignore */ }
+            }
         }
     }
 
@@ -466,6 +500,11 @@ export default class ConnlePush {
     consumePendingAnswer( call_id ) {
         const uuid = String( call_id || '' ).toLowerCase();
         if ( !uuid || this._pendingNativeAnswer !== uuid ) return false;
+        if ( ( Date.now() - ( this._pendingNativeAnswerAt || 0 ) ) > MAX_PARKED_ANSWER_AGE_MS ) {
+            dbg( 'parked answer expired:', uuid );
+            this._pendingNativeAnswer = null;
+            return false;
+        }
         if ( !this.connle.isConnected ) {
             dbg( 'answer stays parked — session not live yet:', uuid );
             return false;
@@ -494,12 +533,21 @@ export default class ConnlePush {
         if ( _coldPending ) {
             const cold = _coldPending;
             _coldPending = null;
-            if ( _coldAnswer ) {
-                dbg( 'carrying cold answer into instance:', _coldAnswer );
-                this._pendingNativeAnswer = _coldAnswer;
+            if ( _coldAnswer && ( Date.now() - _coldAnswerAt ) > MAX_PARKED_ANSWER_AGE_MS ) {
+                // An Answer tapped on a ring the server timed out long ago —
+                // completing it can only yield call_mismatch. Drop the tap and
+                // the equally-dead invite; don't replay either.
+                dbg( 'stale cold answer dropped:', _coldAnswer );
                 _coldAnswer = null;
+            } else {
+                if ( _coldAnswer ) {
+                    dbg( 'carrying cold answer into instance:', _coldAnswer );
+                    this._pendingNativeAnswer = _coldAnswer;
+                    this._pendingNativeAnswerAt = _coldAnswerAt;
+                    _coldAnswer = null;
+                }
+                setTimeout( () => this._onPush( { ...cold, _alreadyRang: true } ), 0 );
             }
-            setTimeout( () => this._onPush( { ...cold, _alreadyRang: true } ), 0 );
         }
 
         // Token: prefer the one another TeleCMI SDK already fetched (same
@@ -552,7 +600,11 @@ export default class ConnlePush {
                 router.publishToken( info );
                 this._onDeviceToken( info );
             } );
-            messaging.onMessage( ( msg ) => router.dispatch( ( msg && msg.data ) || null ) );
+            messaging.onMessage( ( msg ) => {
+                const data = ( msg && msg.data ) || null;
+                if ( _isStaleRing( msg, data ) ) return; // FCM retry of a dead call
+                router.dispatch( data );
+            } );
             // Background handler is registered at module load (headless-safe).
         } else if ( Platform.OS === 'ios' ) {
             const VoipPush = loadVoipPush();
@@ -630,7 +682,10 @@ export default class ConnlePush {
         // A native Answer tap that arrived while the socket was down (typical
         // lock-screen wake) completes now that the session is live.
         const pending = this._pendingNativeAnswer;
-        if ( pending && String( this.connle.callId || '' ).toLowerCase() === pending ) {
+        if ( pending && ( Date.now() - ( this._pendingNativeAnswerAt || 0 ) ) > MAX_PARKED_ANSWER_AGE_MS ) {
+            dbg( 'parked answer expired, not completing:', pending );
+            this._pendingNativeAnswer = null;
+        } else if ( pending && String( this.connle.callId || '' ).toLowerCase() === pending ) {
             this._pendingNativeAnswer = null;
             dbg( 'completing parked native answer on reconnect:', pending );
             this._answerWithPermissions();
