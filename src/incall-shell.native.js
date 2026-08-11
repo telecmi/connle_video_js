@@ -113,24 +113,23 @@ function titleCase(name) {
 // Round control button, WhatsApp style: translucent circle with a native
 // Material icon (vector drawables shipped in the SDK's Android library),
 // small label; toggled state inverts to a solid white circle.
-function Control({ icon, label, active, danger, onPress }) {
-    // The WHOLE control (circle + label) is the tap target — thumbs land on
-    // labels as often as on circles.
+function Control({ icon, active, danger, onPress }) {
+    // Icon-only round buttons (WhatsApp style) — the icon itself is the
+    // language; toggled state inverts to a solid white circle.
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.controlWrap}>
-            <View
-                style={[
-                    styles.control,
-                    active ? styles.controlActive : null,
-                    danger ? styles.controlDanger : null,
-                ]}
-            >
-                <Image
-                    source={ICONS[icon]}
-                    style={[ styles.controlIcon, active ? styles.controlIconActive : null ]}
-                />
-            </View>
-            <Text style={styles.controlLabel}>{label}</Text>
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.7}
+            style={[
+                styles.control,
+                active ? styles.controlActive : null,
+                danger ? styles.controlDanger : null,
+            ]}
+        >
+            <Image
+                source={ICONS[icon]}
+                style={[ styles.controlIcon, active ? styles.controlIconActive : null ]}
+            />
         </TouchableOpacity>
     );
 }
@@ -253,7 +252,9 @@ export default function ConnleInCallShell(props) {
     return (
         <View style={styles.root}>
             {showVideo ? (
-                <TrackSurface track={remoteTrack} style={StyleSheet.absoluteFill} />
+                <View style={styles.remoteWrap} pointerEvents="none">
+                    <TrackSurface track={remoteTrack} style={styles.remoteVideo} />
+                </View>
             ) : (
                 <View style={styles.audioFace}>
                     <Avatar name={name} uri={avatarUri} />
@@ -283,26 +284,23 @@ export default function ConnleInCallShell(props) {
             ) : null}
 
             <View style={styles.controls}>
-                <Control icon="flip" label="Flip" onPress={doFlip} />
+                <Control icon="flip" onPress={doFlip} />
                 <Control
                     icon={videoOff ? 'videocam_off' : 'videocam'}
-                    label={videoOff ? 'Video off' : 'Video'}
                     active={videoOff}
                     onPress={doToggleVideo}
                 />
                 <Control
                     icon={muted ? 'mic_off' : 'mic'}
-                    label={muted ? 'Unmute' : 'Mute'}
                     active={muted}
                     onPress={doToggleMute}
                 />
                 <Control
                     icon={speakerOn ? 'volume_up' : 'volume_off'}
-                    label="Speaker"
                     active={speakerOn}
                     onPress={doToggleSpeaker}
                 />
-                <Control icon="call_end" label="End" danger onPress={doHangup} />
+                <Control icon="call_end" danger onPress={doHangup} />
             </View>
         </View>
     );
@@ -312,6 +310,17 @@ const styles = StyleSheet.create({
     root: {
         flex: 1,
         backgroundColor: '#0B1F3A',
+    },
+    // Remote video must cover the WHOLE screen: explicit wrapper + 100%
+    // dimensions — absoluteFill alone can leave the native video view
+    // measured short and anchored at the top.
+    remoteWrap: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#000000',
+    },
+    remoteVideo: {
+        width: '100%',
+        height: '100%',
     },
     audioFace: {
         ...StyleSheet.absoluteFillObject,
@@ -390,20 +399,16 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 0,
         right: 0,
-        bottom: 40,
+        bottom: 44,
         flexDirection: 'row',
         justifyContent: 'center',
-        alignItems: 'flex-start',
-        gap: 18,
-    },
-    controlWrap: {
         alignItems: 'center',
-        width: 62,
+        gap: 16,
     },
     control: {
-        width: 58,
-        height: 58,
-        borderRadius: 29,
+        width: 62,
+        height: 62,
+        borderRadius: 31,
         backgroundColor: 'rgba(255,255,255,0.22)',
         alignItems: 'center',
         justifyContent: 'center',
@@ -415,19 +420,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#EF4444',
     },
     controlIcon: {
-        width: 26,
-        height: 26,
+        width: 28,
+        height: 28,
         tintColor: '#FFFFFF',
     },
     controlIconActive: {
         tintColor: '#0B1F3A', // dark icon on the inverted white circle
-    },
-    controlLabel: {
-        color: '#FFFFFF',
-        fontSize: 11,
-        marginTop: 6,
-        textShadowColor: 'rgba(0,0,0,0.6)',
-        textShadowRadius: 4,
     },
 });
 
