@@ -71,54 +71,32 @@ Troubleshooting: if a call join ever throws
 autolinked — check `npx react-native config` lists
 `@telecmi/connle-video-native` with an Android project.
 
-## 2b. MainActivity — lock-screen answering
+## 2b. MainActivity — nothing to do
 
-In `MainActivity.kt`, let an answered call open the app over the keyguard
-(manifest attributes alone are not enough on Samsung):
+Keep `MainActivity` completely stock. **Do not** add `showWhenLocked` /
+`turnScreenOn` to the activity or manifest — a permanent flag makes any
+screen-wake reveal the app instead of the lock screen. On a locked phone the
+SDK shows its **own** full call surface (ring screen, then in-call video +
+controls) over the keyguard, boots your app invisibly behind it, and hands
+off to your UI when the user unlocks.
 
-```kotlin
-import android.app.KeyguardManager
-import android.content.Context
-import android.os.Build
-import android.os.Bundle
+## 2c. Manifest permissions — none to add
 
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
-        (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager)
-            .requestDismissKeyguard(this, null)
-    }
-}
-```
-
-And on the `<activity>` in `AndroidManifest.xml`:
-`android:showWhenLocked="true" android:turnScreenOn="true"`.
-
-## 2. Manifest permissions
-
-Your app's `AndroidManifest.xml` needs only the media/network set:
-
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-<uses-permission android:name="android.permission.WAKE_LOCK" />
-```
-
-Everything call-related is merged automatically from the SDK's bundled
-`@telecmi/react-native-callkeep` (library manifest): `FOREGROUND_SERVICE`,
-`FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_MICROPHONE`,
-`POST_NOTIFICATIONS`, `USE_FULL_SCREEN_INTENT`, `MANAGE_OWN_CALLS`,
-`READ_PHONE_STATE`/`READ_PHONE_NUMBERS`, `CALL_PHONE`, and the
-`VoiceConnectionService` declaration itself — do not re-declare them.
+Every permission the SDK needs merges in automatically from its library
+manifests: media/network (`INTERNET`, `CAMERA`, `RECORD_AUDIO`,
+`MODIFY_AUDIO_SETTINGS`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`,
+`BLUETOOTH_CONNECT`) from `@telecmi/connle-video-native`, and everything
+call-related (`FOREGROUND_SERVICE*`, `POST_NOTIFICATIONS`,
+`USE_FULL_SCREEN_INTENT`, `MANAGE_OWN_CALLS`, `READ_PHONE_STATE`/
+`READ_PHONE_NUMBERS`, `CALL_PHONE`, the `VoiceConnectionService`
+declaration) from the bundled `@telecmi/react-native-callkeep`. Do not
+re-declare any of them.
 
 Runtime permission dialogs (mic, camera, notifications) are requested by
-the SDK when a call is answered from the native screen; request them at
-app launch too for the smoothest first call (see §3).
+the SDK when a call is answered. **Also request camera + microphone once at
+login**: permission dialogs cannot appear over a locked screen, so a
+first-ever call answered from the lock screen would otherwise connect
+without media (see §3).
 
 ## 3. Request runtime permissions
 

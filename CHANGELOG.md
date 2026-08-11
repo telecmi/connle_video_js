@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added — Android lock-screen call experience (SDK-owned, zero app code)
+- **Full-screen ring on the locked phone**: caller name + Answer/Decline over
+  the keyguard, heads-up CallStyle notification, screen wake that does not
+  depend on OEM full-screen-intent permission.
+- **Full in-call screen over the lock screen**: edge-to-edge remote video,
+  local camera preview, caller name + live talk timer, and icon-only round
+  controls (flip camera, video on/off, mute, speaker, end) — native Material
+  icons bundled with the SDK, every control driving and reflecting the real
+  media state. Rendered on a second React surface inside the SDK's
+  over-keyguard activity (Bridgeless `ReactHost.createSurface`, legacy-bridge
+  fallback, native timer shell as last resort).
+- **Audio-call avatar**: audio calls (or video not yet flowing) show an
+  app-customizable image — constructor option `{ avatar: url }` — with an
+  initial-letter circle fallback. Caller names render title-cased everywhere.
+- **Cold-start locked answers**: answering with the app process dead boots
+  the app invisibly behind the call screen; the session forms and the call
+  completes with no visible loading. Unlocking hands off to the app UI.
+- Media/network `uses-permission`s now merge from the SDK's library manifest —
+  apps declare no manifest permissions at all.
+
+### Fixed
+- Stale FCM call pushes (redelivered after the device was offline or the
+  push channel was wedged) are discarded past the server's no-answer window —
+  they could ring a long-dead call whose UI then hijacked the next answer.
+- Zombie Telecom calls left by a process death mid-ring are purged at process
+  start (they re-asserted their ring and made later calls fail); any answer
+  the SDK gives up on now also ends its native call.
+- The multi-device dismissal cancel no longer ends the call on the device
+  that answered it when the app holds more than one SDK instance.
+- Answers that arrive while the socket is down force an immediate reconnect —
+  JS timers (socket reconnection included) are frozen while a native activity
+  is frontmost, so the parked answer could otherwise wait until the server
+  timed the call out.
+- The in-call surface survives system-initiated activity relaunches (config
+  changes) instead of resurrecting the ring screen mid-call.
+
 ## [1.0.1] - 2026-08-07
 
 ### Fixed

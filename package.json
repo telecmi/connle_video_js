@@ -2,7 +2,7 @@
   "name": "@telecmi/connle-video",
   "title": "Connle Video SDK for Web, Electron, and React Native",
   "version": "1.0.1",
-  "description": "Official Connle video SDK for the browser \u2014 high-quality video/audio calls with the same API as React Native.",
+  "description": "Official Connle video SDK for the browser — high-quality video/audio calls with the same API as React Native.",
   "main": "lib/index.js",
   "types": "index.d.ts",
   "keywords": [
@@ -28,7 +28,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "start": "webpack serve --host 0.0.0.0 --mode development ",
-    "build-node": "babel src --out-dir lib --extensions .js",
+    "build-node": "babel src --out-dir lib --extensions .js --copy-files --no-copy-ignored",
     "build:dev": "webpack --mode development",
     "test": "jest",
     "prepublishOnly": "npm run build-node && npm run build",
@@ -40,6 +40,7 @@
     "@babel/cli": "^7.25.6",
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.4",
+    "@babel/preset-react": "^7.29.7",
     "babel-loader": "^9.2.1",
     "html-webpack-plugin": "^5.6.3",
     "webpack": "^5.95.0",
