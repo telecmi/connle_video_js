@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import Video from './video';
 // Platform-resolved: push.native.js on React Native, push.js (no-op) on web.
 import ConnlePush from './push';
+import { setActiveSession } from './active-session';
 
 const DEFAULT_SERVER_URL = 'wss://signal.connle.com';
 const DEFAULT_MEDIA_URL = 'wss://sfu.connle.com';
@@ -14,6 +15,9 @@ export default class ConnlySignalling extends EventEmitter {
         this.token = token;
         this.mediaURL = mediaURL || DEFAULT_MEDIA_URL;
         this.options = options || {};
+        // SDK-internal surfaces (Android lock-screen in-call shell) find the
+        // live session here.
+        setActiveSession(this);
         // Push wake-ups for incoming video calls (React Native only; no-op on
         // web). Registers this device's token with TeleCMI REST and receives
         // 'video_call'/'video_cancel' pushes — coexists with the voice SDK in

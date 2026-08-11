@@ -13,6 +13,9 @@
 // ALONE in the app, it claims the OS APIs itself.
 
 import { Platform, PermissionsAndroid } from 'react-native';
+// Lock-screen in-call surface: importing registers the 'ConnleInCallShell'
+// AppRegistry component the native activity mounts after a locked answer.
+import './incall-shell';
 
 const dbg = ( ...args ) => {
     try {
