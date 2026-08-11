@@ -219,6 +219,19 @@ const MAX_RING_PUSH_AGE_MS = 45000;
 // since timed out; completing it can only produce call_mismatch errors.
 const MAX_PARKED_ANSWER_AGE_MS = 60000;
 
+// Calls answered on THIS DEVICE — module-level, shared by every SDK instance
+// in the process: apps can construct more than one Connle (auto-login flows
+// do), and the multi-device dismissal cancel is delivered to ALL of them. An
+// instance that never answered must not kill the call its sibling did.
+const _answeredIds = [];
+function _markAnsweredId( call_id ) {
+    _answeredIds.push( String( call_id ) );
+    if ( _answeredIds.length > 20 ) _answeredIds.shift();
+}
+function _wasAnsweredHere( call_id ) {
+    return _answeredIds.includes( String( call_id ) );
+}
+
 function _isStaleRing( msg, data ) {
     if ( !data || data.type !== 'video_call' ) return false; // cancels are idempotent
     const sent = Number( msg && msg.sentTime );
@@ -382,7 +395,7 @@ export default class ConnlePush {
     _handleNativeAnswer( uuid ) {
         // Already answered (app UI answered first and flipped the native
         // screen — this event is the echo): do nothing.
-        if ( this._answeredIds && this._answeredIds.includes( uuid ) ) return;
+        if ( _wasAnsweredHere( uuid ) ) return;
         const current = String( this.connle.callId || '' ).toLowerCase();
         if ( current === uuid && this.connle.isConnected ) {
             this._answerWithPermissions();
@@ -660,9 +673,7 @@ export default class ConnlePush {
      *  including this one) must be ignored here. */
     markAnswered( call_id ) {
         if ( !call_id ) return;
-        this._answeredIds = this._answeredIds || [];
-        this._answeredIds.push( String( call_id ) );
-        if ( this._answeredIds.length > 20 ) this._answeredIds.shift();
+        _markAnsweredId( call_id );
         if ( this._ringTimers ) {
             clearTimeout( this._ringTimers[ String( call_id ) ] );
             delete this._ringTimers[ String( call_id ) ];
@@ -776,7 +787,7 @@ export default class ConnlePush {
                 }
                 // Answered HERE: this cancel is the multi-device dismissal for
                 // the sibling devices — not for us. Never end a live call.
-                if ( data.call_id && this._answeredIds && this._answeredIds.includes( String( data.call_id ) ) ) {
+                if ( data.call_id && _wasAnsweredHere( data.call_id ) ) {
                     dbg( 'cancel ignored — call answered on this device:', data.call_id );
                     return;
                 }

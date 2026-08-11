@@ -5,13 +5,19 @@
 // component on a second React surface after a locked answer. Full video +
 // call controls with zero app wiring — the component finds the live session
 // through the SDK's active-session registry and drives the same public API
-// the app would (toggleAudio / toggleSpeaker / switchCamera / hangup).
+// the app would (toggleAudio / toggleVideo / toggleSpeaker / switchCamera /
+// hangup).
+//
+// Audio calls (or video not yet flowing) show an avatar instead of video —
+// customizable by the app via the constructor option { avatar: <image url> }
+// (falls back to an initial-letter circle from the caller name).
 //
 // Registered at SDK module load so the surface can start even on a cold
 // push-woken process.
 import React, { useEffect, useRef, useState } from 'react';
 import {
     AppRegistry,
+    Image,
     Platform,
     StyleSheet,
     Text,
@@ -26,7 +32,7 @@ try {
     const webrtc = require('@livekit/react-native-webrtc');
     RTCView = webrtc.RTCView;
     RNMediaStream = webrtc.MediaStream;
-} catch { /* rendering degrades to audio-only UI */ }
+} catch { /* rendering degrades to the avatar UI */ }
 
 function trackStreamURL(videoTrack) {
     try {
@@ -36,7 +42,7 @@ function trackStreamURL(videoTrack) {
             if (url) return url;
         }
         if (videoTrack.mediaStreamTrack && RNMediaStream) {
-            return new RNMediaStream([ videoTrack.mediaStreamTrack ] ).toURL();
+            return new RNMediaStream([ videoTrack.mediaStreamTrack ]).toURL();
         }
     } catch { /* not renderable yet */ }
     return '';
@@ -83,18 +89,38 @@ function TrackSurface({ track, mirror, style, zOrder }) {
     );
 }
 
-function Control({ label, active, danger, onPress }) {
+// Round control button, WhatsApp style: translucent circle, glyph icon,
+// small label; toggled state inverts to a solid white circle.
+function Control({ icon, label, active, danger, onPress }) {
+    // The WHOLE control (circle + label) is the tap target — thumbs land on
+    // labels as often as on circles.
     return (
-        <TouchableOpacity
-            onPress={onPress}
-            style={[
-                styles.control,
-                active ? styles.controlActive : null,
-                danger ? styles.controlDanger : null,
-            ]}
-        >
-            <Text style={styles.controlText}>{label}</Text>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.controlWrap}>
+            <View
+                style={[
+                    styles.control,
+                    active ? styles.controlActive : null,
+                    danger ? styles.controlDanger : null,
+                ]}
+            >
+                <Text style={[ styles.controlIcon, active ? styles.controlIconActive : null ]}>
+                    {icon}
+                </Text>
+            </View>
+            <Text style={styles.controlLabel}>{label}</Text>
         </TouchableOpacity>
+    );
+}
+
+function Avatar({ name, uri }) {
+    if (uri) {
+        return <Image source={{ uri }} style={styles.avatarImage} />;
+    }
+    const letter = String(name || '?').trim().charAt(0).toUpperCase() || '?';
+    return (
+        <View style={styles.avatarCircle}>
+            <Text style={styles.avatarLetter}>{letter}</Text>
+        </View>
     );
 }
 
@@ -104,6 +130,7 @@ export default function ConnleInCallShell(props) {
     const [ remoteTrack, setRemoteTrack ] = useState(null);
     const [ localTrack, setLocalTrack ] = useState(null);
     const [ muted, setMuted ] = useState(false);
+    const [ videoOff, setVideoOff ] = useState(false);
     const [ speakerOn, setSpeakerOn ] = useState(true);
     const [ mirror, setMirror ] = useState(true);
     const [ seconds, setSeconds ] = useState(0);
@@ -111,22 +138,35 @@ export default function ConnleInCallShell(props) {
     const startRef = useRef(Date.now());
     const wasConnectedRef = useRef(false);
 
-    // Track discovery + liveness: poll the room — robust against every
-    // ordering (cold start, reconnect, late subscription), and events keep
-    // flowing to the app's own listeners untouched.
+    // App-customizable avatar for the audio-call face of the screen:
+    // new ConnleVideo(url, token, mediaURL, { avatar: 'https://…/logo.png' })
+    const avatarUri =
+        ( session && session.options &&
+          ( session.options.avatar ||
+            ( session.options.ui && session.options.ui.avatar ) ) ) || null;
+
+    // Track discovery + real control state + liveness: poll the room — robust
+    // against every ordering (cold start, reconnect, late subscription), and
+    // the app's own event listeners stay untouched.
     useEffect(() => {
         const iv = setInterval(() => {
             const s = getActiveSession();
             const room = s && s.video && s.video.room;
             if (!room) return;
             try {
-                setLocalTrack(cameraTrack(room.localParticipant) || null);
+                const local = room.localParticipant;
+                setLocalTrack(cameraTrack(local) || null);
                 let remote = null;
                 for (const p of room.remoteParticipants.values()) {
                     remote = cameraTrack(p);
                     if (remote) break;
                 }
                 setRemoteTrack(remote || null);
+                // Truthful toggle states straight from the room.
+                if (local) {
+                    if (typeof local.isMicrophoneEnabled === 'boolean') setMuted(!local.isMicrophoneEnabled);
+                    if (typeof local.isCameraEnabled === 'boolean') setVideoOff(!local.isCameraEnabled);
+                }
                 // "Ended" only on a connected -> disconnected TRANSITION —
                 // during setup the room exists but is still connecting.
                 const connectedNow = !!( s.video.isConnected && s.video.isConnected() );
@@ -156,6 +196,12 @@ export default function ConnleInCallShell(props) {
         Promise.resolve(s.toggleAudio()).catch(() => { });
         setMuted(( m ) => !m);
     };
+    const doToggleVideo = () => {
+        const s = getActiveSession();
+        if (!s) return;
+        Promise.resolve(s.toggleVideo()).catch(() => { });
+        setVideoOff(( v ) => !v);
+    };
     const doToggleSpeaker = () => {
         const s = getActiveSession();
         if (!s) return;
@@ -178,20 +224,23 @@ export default function ConnleInCallShell(props) {
         // itself when the call dies — nothing else to do here.
     };
 
+    const showVideo = !!remoteTrack;
+
     return (
         <View style={styles.root}>
-            {remoteTrack ? (
+            {showVideo ? (
                 <TrackSurface track={remoteTrack} style={StyleSheet.absoluteFill} />
             ) : (
-                <View style={styles.waiting}>
-                    <Text style={styles.waitingName}>{name}</Text>
-                    <Text style={styles.waitingSub}>
-                        {live ? 'Connecting…' : 'Call ended'}
+                <View style={styles.audioFace}>
+                    <Avatar name={name} uri={avatarUri} />
+                    <Text style={styles.audioName}>{name}</Text>
+                    <Text style={styles.audioState}>
+                        {live ? ( wasConnectedRef.current ? `${mm}:${ss}` : 'Connecting…' ) : 'Call ended'}
                     </Text>
                 </View>
             )}
 
-            {localTrack ? (
+            {localTrack && !videoOff ? (
                 <View style={styles.pip}>
                     <TrackSurface
                         track={localTrack}
@@ -202,16 +251,34 @@ export default function ConnleInCallShell(props) {
                 </View>
             ) : null}
 
-            <View style={styles.topBar}>
-                <Text style={styles.topName}>{name}</Text>
-                <Text style={styles.topTimer}>{live ? `${mm}:${ss}` : 'Ended'}</Text>
-            </View>
+            {showVideo ? (
+                <View style={styles.topBar}>
+                    <Text style={styles.topName}>{name}</Text>
+                    <Text style={styles.topTimer}>{live ? `${mm}:${ss}` : 'Ended'}</Text>
+                </View>
+            ) : null}
 
             <View style={styles.controls}>
-                <Control label={muted ? 'Unmute' : 'Mute'} active={muted} onPress={doToggleMute} />
-                <Control label="Speaker" active={speakerOn} onPress={doToggleSpeaker} />
-                <Control label="Flip" onPress={doFlip} />
-                <Control label="End" danger onPress={doHangup} />
+                <Control icon={'🔄'} label="Flip" onPress={doFlip} />
+                <Control
+                    icon={'🎥'}
+                    label={videoOff ? 'Video off' : 'Video'}
+                    active={videoOff}
+                    onPress={doToggleVideo}
+                />
+                <Control
+                    icon={'🎙️'}
+                    label={muted ? 'Unmute' : 'Mute'}
+                    active={muted}
+                    onPress={doToggleMute}
+                />
+                <Control
+                    icon={'🔊'}
+                    label="Speaker"
+                    active={speakerOn}
+                    onPress={doToggleSpeaker}
+                />
+                <Control icon={'📞'} label="End" danger onPress={doHangup} />
             </View>
         </View>
     );
@@ -222,20 +289,42 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#0B1F3A',
     },
-    waiting: {
+    audioFace: {
         ...StyleSheet.absoluteFillObject,
         alignItems: 'center',
         justifyContent: 'center',
+        paddingBottom: 120,
     },
-    waitingName: {
+    avatarCircle: {
+        width: 128,
+        height: 128,
+        borderRadius: 64,
+        backgroundColor: '#2E5C9E',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    avatarImage: {
+        width: 128,
+        height: 128,
+        borderRadius: 64,
+        backgroundColor: '#10294A',
+    },
+    avatarLetter: {
         color: '#FFFFFF',
-        fontSize: 30,
+        fontSize: 56,
         fontWeight: '700',
-        marginBottom: 8,
     },
-    waitingSub: {
+    audioName: {
+        color: '#FFFFFF',
+        fontSize: 28,
+        fontWeight: '700',
+        marginTop: 24,
+    },
+    audioState: {
         color: '#9FC1FF',
         fontSize: 16,
+        marginTop: 8,
+        fontVariant: [ 'tabular-nums' ],
     },
     pip: {
         position: 'absolute',
@@ -254,7 +343,9 @@ const styles = StyleSheet.create({
     topBar: {
         position: 'absolute',
         top: 56,
-        left: 20,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
     },
     topName: {
         color: '#FFFFFF',
@@ -269,35 +360,48 @@ const styles = StyleSheet.create({
         marginTop: 2,
         textShadowColor: 'rgba(0,0,0,0.6)',
         textShadowRadius: 6,
+        fontVariant: [ 'tabular-nums' ],
     },
     controls: {
         position: 'absolute',
         left: 0,
         right: 0,
-        bottom: 48,
+        bottom: 40,
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 14,
+        alignItems: 'flex-start',
+        gap: 18,
+    },
+    controlWrap: {
+        alignItems: 'center',
+        width: 62,
     },
     control: {
-        minWidth: 76,
-        paddingHorizontal: 14,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'rgba(255,255,255,0.18)',
+        width: 58,
+        height: 58,
+        borderRadius: 29,
+        backgroundColor: 'rgba(255,255,255,0.22)',
         alignItems: 'center',
         justifyContent: 'center',
     },
     controlActive: {
-        backgroundColor: 'rgba(255,255,255,0.45)',
+        backgroundColor: '#FFFFFF',
     },
     controlDanger: {
         backgroundColor: '#EF4444',
     },
-    controlText: {
+    controlIcon: {
+        fontSize: 24,
+    },
+    controlIconActive: {
+        opacity: 0.85,
+    },
+    controlLabel: {
         color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 11,
+        marginTop: 6,
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowRadius: 4,
     },
 });
 

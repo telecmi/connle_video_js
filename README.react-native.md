@@ -77,6 +77,7 @@ const connle = new ConnleVideo(serverUrl, token, mediaUrl, {
   push: {
     apiBase: 'https://api.connle.com',  // TeleCMI REST base (override for staging)
   },
+  avatar: 'https://example.com/caller.png', // lock-screen call image (optional)
 });
 ```
 
@@ -84,6 +85,15 @@ const connle = new ConnleVideo(serverUrl, token, mediaUrl, {
 | :--- | :--- | :--- |
 | `autoPush` | `true` | Fetch the device push token and register it automatically on every successful `connect()`. |
 | `push.apiBase` | production REST | Where the token is registered. |
+| `avatar` | initial-letter circle | Image shown on the Android lock-screen call surface for audio calls (or while video hasn't started). Any image URL. |
+
+### Android lock-screen call surface
+
+When a call is answered while the phone is locked, the SDK shows its own
+full call screen over the lock screen — remote video (or the avatar above on
+audio calls), local camera preview, caller name, talk timer, and controls
+(flip camera, video on/off, mute, speaker, end). No app code is involved;
+unlocking the phone hands off to your app's own call UI.
 
 ### `unregisterPush(callback)`
 
