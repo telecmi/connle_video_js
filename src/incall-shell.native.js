@@ -34,6 +34,20 @@ try {
     RNMediaStream = webrtc.MediaStream;
 } catch { /* rendering degrades to the avatar UI */ }
 
+// Material icons, bundled with the SDK as PNG assets (white on transparent,
+// recolored at runtime via tintColor). Static requires — Metro needs
+// literal paths to pack assets.
+const ICONS = {
+    mic: require('./icons/mic.png'),
+    mic_off: require('./icons/mic_off.png'),
+    videocam: require('./icons/videocam.png'),
+    videocam_off: require('./icons/videocam_off.png'),
+    volume_up: require('./icons/volume_up.png'),
+    volume_off: require('./icons/volume_off.png'),
+    flip: require('./icons/flip.png'),
+    call_end: require('./icons/call_end.png'),
+};
+
 function trackStreamURL(videoTrack) {
     try {
         if (!videoTrack) return '';
@@ -112,7 +126,7 @@ function Control({ icon, label, active, danger, onPress }) {
                 ]}
             >
                 <Image
-                    source={{ uri: icon }}
+                    source={ICONS[icon]}
                     style={[ styles.controlIcon, active ? styles.controlIconActive : null ]}
                 />
             </View>
@@ -269,26 +283,26 @@ export default function ConnleInCallShell(props) {
             ) : null}
 
             <View style={styles.controls}>
-                <Control icon="connle_ic_flip" label="Flip" onPress={doFlip} />
+                <Control icon="flip" label="Flip" onPress={doFlip} />
                 <Control
-                    icon={videoOff ? 'connle_ic_videocam_off' : 'connle_ic_videocam'}
+                    icon={videoOff ? 'videocam_off' : 'videocam'}
                     label={videoOff ? 'Video off' : 'Video'}
                     active={videoOff}
                     onPress={doToggleVideo}
                 />
                 <Control
-                    icon={muted ? 'connle_ic_mic_off' : 'connle_ic_mic'}
+                    icon={muted ? 'mic_off' : 'mic'}
                     label={muted ? 'Unmute' : 'Mute'}
                     active={muted}
                     onPress={doToggleMute}
                 />
                 <Control
-                    icon={speakerOn ? 'connle_ic_volume_up' : 'connle_ic_volume_off'}
+                    icon={speakerOn ? 'volume_up' : 'volume_off'}
                     label="Speaker"
                     active={speakerOn}
                     onPress={doToggleSpeaker}
                 />
-                <Control icon="connle_ic_call_end" label="End" danger onPress={doHangup} />
+                <Control icon="call_end" label="End" danger onPress={doHangup} />
             </View>
         </View>
     );

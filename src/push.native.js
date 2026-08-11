@@ -518,6 +518,7 @@ export default class ConnlePush {
         if ( !uuid || this._pendingNativeAnswer !== uuid ) return false;
         if ( ( Date.now() - ( this._pendingNativeAnswerAt || 0 ) ) > MAX_PARKED_ANSWER_AGE_MS ) {
             dbg( 'parked answer expired:', uuid );
+            this._endNativeCall( uuid );
             this._pendingNativeAnswer = null;
             return false;
         }
@@ -552,8 +553,11 @@ export default class ConnlePush {
             if ( _coldAnswer && ( Date.now() - _coldAnswerAt ) > MAX_PARKED_ANSWER_AGE_MS ) {
                 // An Answer tapped on a ring the server timed out long ago —
                 // completing it can only yield call_mismatch. Drop the tap and
-                // the equally-dead invite; don't replay either.
+                // the equally-dead invite, and END the native call it created
+                // (its Telecom connection went ACTIVE at the tap and would
+                // linger as a zombie with a stuck in-call shell otherwise).
                 dbg( 'stale cold answer dropped:', _coldAnswer );
+                this._endNativeCall( _coldAnswer );
                 _coldAnswer = null;
             } else {
                 if ( _coldAnswer ) {
@@ -668,6 +672,15 @@ export default class ConnlePush {
         }
     }
 
+    /** End the native (Telecom/CallKit) call for a uuid the SDK gave up on —
+     *  its connection would otherwise linger ACTIVE with a stuck call UI.
+     *  3 = unanswered/missed. */
+    _endNativeCall( uuid ) {
+        const ck = loadCallKeep();
+        if ( !ck || !uuid ) return;
+        try { ck.reportEndCallWithUUID( String( uuid ), 3 ); } catch { /* ignore */ }
+    }
+
     /** The app answered this call — the ring backstop must not kill it, and
      *  the multi-device dismissal cancel (sent to ALL the user's devices,
      *  including this one) must be ignored here. */
@@ -698,6 +711,7 @@ export default class ConnlePush {
         const pending = this._pendingNativeAnswer;
         if ( pending && ( Date.now() - ( this._pendingNativeAnswerAt || 0 ) ) > MAX_PARKED_ANSWER_AGE_MS ) {
             dbg( 'parked answer expired, not completing:', pending );
+            this._endNativeCall( pending );
             this._pendingNativeAnswer = null;
         } else if ( pending && String( this.connle.callId || '' ).toLowerCase() === pending ) {
             this._pendingNativeAnswer = null;
