@@ -89,7 +89,15 @@ function TrackSurface({ track, mirror, style, zOrder }) {
     );
 }
 
-// Round control button, WhatsApp style: translucent circle, glyph icon,
+function titleCase(name) {
+    return String(name || '')
+        .split(' ')
+        .map(( w ) => ( w ? w.charAt(0).toUpperCase() + w.slice(1) : w ))
+        .join(' ');
+}
+
+// Round control button, WhatsApp style: translucent circle with a native
+// Material icon (vector drawables shipped in the SDK's Android library),
 // small label; toggled state inverts to a solid white circle.
 function Control({ icon, label, active, danger, onPress }) {
     // The WHOLE control (circle + label) is the tap target — thumbs land on
@@ -103,9 +111,10 @@ function Control({ icon, label, active, danger, onPress }) {
                     danger ? styles.controlDanger : null,
                 ]}
             >
-                <Text style={[ styles.controlIcon, active ? styles.controlIconActive : null ]}>
-                    {icon}
-                </Text>
+                <Image
+                    source={{ uri: icon }}
+                    style={[ styles.controlIcon, active ? styles.controlIconActive : null ]}
+                />
             </View>
             <Text style={styles.controlLabel}>{label}</Text>
         </TouchableOpacity>
@@ -125,7 +134,7 @@ function Avatar({ name, uri }) {
 }
 
 export default function ConnleInCallShell(props) {
-    const name = ( props && props.name ) || 'In call';
+    const name = titleCase(( props && props.name ) || 'In call');
     const [ session ] = useState(() => getActiveSession());
     const [ remoteTrack, setRemoteTrack ] = useState(null);
     const [ localTrack, setLocalTrack ] = useState(null);
@@ -162,11 +171,12 @@ export default function ConnleInCallShell(props) {
                     if (remote) break;
                 }
                 setRemoteTrack(remote || null);
-                // Truthful toggle states straight from the room.
+                // Truthful toggle states straight from the room / audio route.
                 if (local) {
                     if (typeof local.isMicrophoneEnabled === 'boolean') setMuted(!local.isMicrophoneEnabled);
                     if (typeof local.isCameraEnabled === 'boolean') setVideoOff(!local.isCameraEnabled);
                 }
+                if (typeof s.video.speakerOn === 'boolean') setSpeakerOn(s.video.speakerOn);
                 // "Ended" only on a connected -> disconnected TRANSITION —
                 // during setup the room exists but is still connecting.
                 const connectedNow = !!( s.video.isConnected && s.video.isConnected() );
@@ -259,26 +269,26 @@ export default function ConnleInCallShell(props) {
             ) : null}
 
             <View style={styles.controls}>
-                <Control icon={'🔄'} label="Flip" onPress={doFlip} />
+                <Control icon="connle_ic_flip" label="Flip" onPress={doFlip} />
                 <Control
-                    icon={'🎥'}
+                    icon={videoOff ? 'connle_ic_videocam_off' : 'connle_ic_videocam'}
                     label={videoOff ? 'Video off' : 'Video'}
                     active={videoOff}
                     onPress={doToggleVideo}
                 />
                 <Control
-                    icon={'🎙️'}
+                    icon={muted ? 'connle_ic_mic_off' : 'connle_ic_mic'}
                     label={muted ? 'Unmute' : 'Mute'}
                     active={muted}
                     onPress={doToggleMute}
                 />
                 <Control
-                    icon={'🔊'}
+                    icon={speakerOn ? 'connle_ic_volume_up' : 'connle_ic_volume_off'}
                     label="Speaker"
                     active={speakerOn}
                     onPress={doToggleSpeaker}
                 />
-                <Control icon={'📞'} label="End" danger onPress={doHangup} />
+                <Control icon="connle_ic_call_end" label="End" danger onPress={doHangup} />
             </View>
         </View>
     );
@@ -391,10 +401,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#EF4444',
     },
     controlIcon: {
-        fontSize: 24,
+        width: 26,
+        height: 26,
+        tintColor: '#FFFFFF',
     },
     controlIconActive: {
-        opacity: 0.85,
+        tintColor: '#0B1F3A', // dark icon on the inverted white circle
     },
     controlLabel: {
         color: '#FFFFFF',
