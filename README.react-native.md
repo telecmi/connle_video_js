@@ -108,6 +108,31 @@ cannot appear over the keyguard, so the SDK renders its own:
 
 No app code is involved in any of this.
 
+### `ConnleVideo.registerColdBoot(factory)` — killed-app answers
+
+An incoming-call push revives a killed app even on a locked phone — where no
+app UI ever mounts. Only your app knows how to build its session (stored
+credentials), so register a factory **at module scope** (index.js, before
+`AppRegistry.registerComponent`):
+
+```js
+import ConnleVideo from '@telecmi/connle-video-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+ConnleVideo.registerColdBoot(async () => {
+  const token = await AsyncStorage.getItem('my.session.token');
+  if (!token) return;                       // not logged in — nothing to do
+  const connle = new ConnleVideo(undefined, token);
+  globalThis.myColdSession = connle;        // adopt in your app if it mounts
+  connle.connect();
+});
+```
+
+The SDK invokes it the moment a cold ring arrives, so the session is forming
+while the phone is still ringing; a lock-screen answer then completes with no
+app UI involved. Without a registered factory, killed-app answers only work
+after the app has been opened once.
+
 ### `unregisterPush(callback)`
 
 Removes this device's push registration. **Call it before sign-out** — a

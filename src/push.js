@@ -6,3 +6,6 @@ export default class ConnlePush {
     suppressSocketIncoming() { return false; }
     unregister( callback ) { if ( typeof callback === 'function' ) callback( { code: 200, status: 'no push on web' } ); }
 }
+
+// Web: cold boot does not exist — same registration surface, no-op.
+ConnlePush.registerColdBoot = function () { };

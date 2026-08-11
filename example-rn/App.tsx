@@ -440,7 +440,12 @@ export default function App(): React.JSX.Element {
       connleRef.current?.disconnect();
       connleRef.current?.removeAllListeners();
     } catch {}
-    const connleai = new ConnleVideo(
+    // A cold-boot session (killed app woken by a call push — see index.js)
+    // may already exist and even carry a live call: adopt it instead of
+    // building a second one.
+    const cold = (globalThis as any).__connleColdSession;
+    (globalThis as any).__connleColdSession = undefined;
+    const connleai = cold ?? new ConnleVideo(
       serverUrl.trim(),
       sdkToken,
       mediaUrl.trim() || undefined,

@@ -210,6 +210,26 @@ let _coldAnswer = null;       // Answer tapped on that cold ring, before any ins
 let _coldAnswerAt = 0;        // when that tap happened (stale taps must die)
 let _coldEventsWired = false;
 
+// Cold-boot factory: a killed app's process is revived by the call push, but
+// only the APP knows how to create its session (stored credentials). The app
+// registers a factory at module scope (ConnleVideo.registerColdBoot); the SDK
+// invokes it the moment a cold ring arrives, so the session is forming while
+// the phone is still ringing and a lock-screen answer completes with no app
+// UI involved.
+let _coldBootFactory = null;
+let _coldBootRan = false;
+function _invokeColdBoot() {
+    if ( _coldBootRan || !_coldBootFactory ) return;
+    _coldBootRan = true;
+    dbg( 'cold boot: invoking the app session factory' );
+    try {
+        Promise.resolve( _coldBootFactory() )
+            .catch( ( e ) => dbg( 'cold-boot factory failed —', e && e.message ) );
+    } catch ( e ) {
+        dbg( 'cold-boot factory threw —', e && e.message );
+    }
+}
+
 // FCM redelivers undelivered data messages for DAYS (device offline, process
 // dead, push channel wedged). A call invite older than the server's ~35 s
 // no-answer window can never be answered — ringing it creates a ghost call
@@ -256,9 +276,7 @@ function _wireColdNativeEvents( ck ) {
             dbg( 'cold answer parked:', uuid );
             _coldAnswer = uuid;
             _coldAnswerAt = Date.now();
-            if ( Platform.OS === 'android' ) {
-                try { ck.backToForeground(); } catch { /* ignore */ }
-            }
+            _invokeColdBoot(); // in case the ring path didn't (belt+braces)
         } );
         ck.addEventListener( 'endCall', ( ev ) => {
             const uuid = String( ( ev && ev.callUUID ) || '' ).toLowerCase();
@@ -296,6 +314,7 @@ function _handleColdPush( raw ) {
     }
     if ( data.type !== 'video_call' ) return;
     _coldPending = data;
+    _invokeColdBoot(); // start forming the session while the phone rings
     if ( ck ) {
         _wireColdNativeEvents( ck );
         const hasVideo = !!( data.media && data.media.video );
@@ -857,3 +876,10 @@ export default class ConnlePush {
         }
     }
 }
+
+/** App-registered factory that creates the SDK session on a cold (killed-app)
+ *  call wake-up — see the cold-boot notes above. Register at MODULE scope so
+ *  it exists before any push handling runs. */
+ConnlePush.registerColdBoot = function ( factory ) {
+    if ( typeof factory === 'function' ) _coldBootFactory = factory;
+};

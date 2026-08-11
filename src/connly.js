@@ -9,6 +9,16 @@ const DEFAULT_SERVER_URL = 'wss://signal.connle.com';
 const DEFAULT_MEDIA_URL = 'wss://sfu.connle.com';
 
 export default class ConnlySignalling extends EventEmitter {
+
+    /** Register a factory that creates the app's session on a COLD call
+     *  wake-up (React Native): a push can revive a killed app on a locked
+     *  phone, where no app UI ever mounts — only this factory can build the
+     *  session that completes the answer. Call at MODULE scope (index.js).
+     *  No-op on web. */
+    static registerColdBoot(factory) {
+        try { ConnlePush.registerColdBoot(factory); } catch { /* web */ }
+    }
+
     constructor(serverUrl, token, mediaURL, options) {
         super();
         this.serverUrl = serverUrl || DEFAULT_SERVER_URL;
