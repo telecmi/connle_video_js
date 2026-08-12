@@ -156,7 +156,14 @@ function loadCallKeep() {
         _callKeepSetup = true;
         try {
             const setupPromise = _callKeep.setup( {
-                ios: { appName: 'Connle', supportsVideo: true },
+                ios: {
+                    appName: 'Connle',
+                    supportsVideo: true,
+                    handleType: 'number',
+                    // The SDK's media engine owns the audio session — CallKeep
+                    // must never configure AVAudioSession (LiveKit pattern).
+                    audioSession: { autoConfigure: false },
+                },
                 android: {
                     alertTitle: 'Permissions required',
                     alertDescription: 'This application needs phone-account access to show incoming calls',

@@ -26,6 +26,10 @@
     @"appName": @"ConnleVideoExample",
     @"supportsVideo": @YES,
     @"handleType": @"number",
+    // The SDK's media engine owns the audio session (LiveKit pattern) —
+    // CallKeep must never configure AVAudioSession or the two owners
+    // thrash each other at answer time.
+    @"audioSession": @{ @"autoConfigure": @NO },
   }];
 
   // Register for VoIP push (PushKit). iOS issues the VoIP token, which the
