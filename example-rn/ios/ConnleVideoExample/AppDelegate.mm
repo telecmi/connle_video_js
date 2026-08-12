@@ -79,19 +79,10 @@ withCompletionHandler:(void (^)(void))completion
   NSString *callerDisplay = ([fromName isKindOfClass:[NSString class]] && fromName.length > 0)
       ? fromName : caller;
   BOOL isCancel = [payload.dictionaryPayload[@"type"] isEqual:@"video_cancel"];
-  // hasVideo decides whether iOS opens the app when the call is answered
-  // (video calls only — audio answers stay on the system call screen).
-  // media may arrive as a JSON string ({"audio":true,"video":true}) or a
-  // dictionary; a video_call defaults to VIDEO unless media explicitly says
-  // video:false — a parsing miss must never downgrade the call to audio.
-  id media = payload.dictionaryPayload[@"media"];
+  // EVERY call on this platform is a video call. hasVideo=YES is what makes
+  // iOS dismiss its own call screen on answer and open the app (audio calls
+  // stay on the system screen — never wanted here).
   BOOL hasVideo = YES;
-  if ([media isKindOfClass:[NSString class]]) {
-    hasVideo = [media rangeOfString:@"\"video\":false"].location == NSNotFound;
-  } else if ([media isKindOfClass:[NSDictionary class]]) {
-    id v = [media objectForKey:@"video"];
-    hasVideo = (v == nil) ? YES : [v boolValue];
-  }
 
   // Keep the JS thread scheduled long enough to connect the call on a locked
   // device; otherwise iOS suspends it right after the push.

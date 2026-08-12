@@ -317,7 +317,7 @@ function _handleColdPush( raw ) {
     _invokeColdBoot(); // start forming the session while the phone rings
     if ( ck ) {
         _wireColdNativeEvents( ck );
-        const hasVideo = !!( data.media && data.media.video );
+        const hasVideo = true; // every call on this platform is a video call
         const caller = data.from_name || data.from || 'Incoming call';
         try {
             ck.displayIncomingCall( String( data.call_id ), caller, caller, 'generic', hasVideo );
@@ -854,7 +854,7 @@ export default class ConnlePush {
                 const ck = loadCallKeep();
                 if ( ck ) {
                     this._wireNativeCallEvents( ck );
-                    const hasVideo = !!( data.media && typeof data.media === 'object' && data.media.video );
+                    const hasVideo = true; // every call on this platform is a video call
                     const caller = data.from_name || data.from || 'Incoming call';
                     try {
                         // handle = display name too: Android's system call UI
