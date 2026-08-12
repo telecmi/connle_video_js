@@ -86,40 +86,35 @@ function cameraTrack(participant) {
     return null;
 }
 
-function TrackSurface({ track, mirror, style, zOrder }) {
-    // Preferred: the engine's own component (flip-restart safe, and reports
-    // element visibility so adaptive streaming actually sends remote video).
+// REMOTE video: the engine's own component — it reports element visibility,
+// without which adaptive streaming never sends the video at all. Remote
+// tracks don't restart on a local camera flip, so its one-shot stream
+// derivation is safe there.
+function RemoteSurface({ track, style }) {
     if (LKVideoView && track) {
         return (
             <LKVideoView
                 videoTrack={track}
                 objectFit="cover"
-                mirror={!!mirror}
-                zOrder={zOrder || 0}
+                zOrder={0}
                 style={style}
             />
         );
     }
-    return (
-        <RawTrackSurface track={track} mirror={mirror} style={style} zOrder={zOrder} />
-    );
+    return <PolledSurface track={track} style={style} zOrder={0} />;
 }
 
-// Fallback when the engine component is unavailable: raw native view fed by
-// a polled stream URL. Known limits: stale after a camera restart, no
-// adaptive-stream visibility reporting.
-function RawTrackSurface({ track, mirror, style, zOrder }) {
+// LOCAL preview: a camera flip RESTARTS the track and the new native stream
+// materializes a beat AFTER the engine's restart event — a one-shot snapshot
+// (even the engine component's) captures nothing and sticks black. Poll the
+// stream URL continuously and follow wherever it moves; the state setter
+// dedupes so unchanged URLs cost nothing.
+function PolledSurface({ track, mirror, style, zOrder }) {
     const [ url, setUrl ] = useState(() => trackStreamURL(track));
     useEffect(() => {
         setUrl(trackStreamURL(track));
         if (!track) return undefined;
-        const iv = setInterval(() => {
-            const next = trackStreamURL(track);
-            if (next) {
-                setUrl(next);
-                clearInterval(iv);
-            }
-        }, 250);
+        const iv = setInterval(() => setUrl(trackStreamURL(track)), 300);
         return () => clearInterval(iv);
     }, [ track ]);
     if (!RTCView || !url) return null;
@@ -312,7 +307,7 @@ export default function ConnleInCallShell(props) {
         <View style={styles.root}>
             {showVideo ? (
                 <View style={styles.remoteWrap} pointerEvents="none">
-                    <TrackSurface track={remoteTrack} style={styles.remoteVideo} />
+                    <RemoteSurface track={remoteTrack} style={styles.remoteVideo} />
                 </View>
             ) : (
                 <View style={styles.audioFace}>
@@ -326,7 +321,7 @@ export default function ConnleInCallShell(props) {
 
             {localTrack && !videoOff ? (
                 <View style={styles.pip}>
-                    <TrackSurface
+                    <PolledSurface
                         track={localTrack}
                         mirror={mirror}
                         zOrder={1}

@@ -92,14 +92,6 @@ function getTrackStreamURL(videoTrack: any): string {
   }
 }
 
-// The engine's own video component survives camera-flip track restarts and
-// reports element visibility (adaptive streaming only SENDS remote video to
-// reported-visible views). Raw RTCView + polled URL remains as fallback.
-let LKVideoView: any = null;
-try {
-  LKVideoView = require('@livekit/react-native').VideoView;
-} catch {}
-
 function TrackView({
   videoTrack,
   mirror = false,
@@ -111,24 +103,14 @@ function TrackView({
 }): React.JSX.Element {
   const [streamURL, setStreamURL] = useState('');
 
+  // Continuous poll — follows the new native stream after a camera flip
+  // restarts the local track (a one-shot snapshot sticks on the dead stream).
   useEffect(() => {
-    if (LKVideoView) return undefined;
     const updateStreamURL = () => setStreamURL(getTrackStreamURL(videoTrack));
     updateStreamURL();
     const timer = setInterval(updateStreamURL, 250);
     return () => clearInterval(timer);
   }, [videoTrack]);
-
-  if (LKVideoView && videoTrack) {
-    return (
-      <LKVideoView
-        videoTrack={videoTrack}
-        objectFit="cover"
-        mirror={mirror}
-        style={style}
-      />
-    );
-  }
 
   if (!streamURL) {
     return (
