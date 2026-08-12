@@ -34,6 +34,17 @@ try {
     RNMediaStream = webrtc.MediaStream;
 } catch { /* rendering degrades to the avatar UI */ }
 
+// The engine's own video component — REQUIRED for correct rendering:
+// (a) it re-derives the native stream when a camera flip restarts the local
+//     track (a raw stream URL goes stale and the self-view freezes/blanks);
+// (b) with adaptiveStream enabled the server only SENDS video for visible,
+//     reported elements — this component does the visibility reporting, a
+//     raw RTCView never receives remote video at all.
+let LKVideoView = null;
+try {
+    LKVideoView = require('@livekit/react-native').VideoView;
+} catch { /* raw RTCView fallback below */ }
+
 // Material icons, bundled with the SDK as PNG assets (white on transparent,
 // recolored at runtime via tintColor). Static requires — Metro needs
 // literal paths to pack assets.
@@ -76,12 +87,32 @@ function cameraTrack(participant) {
 }
 
 function TrackSurface({ track, mirror, style, zOrder }) {
+    // Preferred: the engine's own component (flip-restart safe, and reports
+    // element visibility so adaptive streaming actually sends remote video).
+    if (LKVideoView && track) {
+        return (
+            <LKVideoView
+                videoTrack={track}
+                objectFit="cover"
+                mirror={!!mirror}
+                zOrder={zOrder || 0}
+                style={style}
+            />
+        );
+    }
+    return (
+        <RawTrackSurface track={track} mirror={mirror} style={style} zOrder={zOrder} />
+    );
+}
+
+// Fallback when the engine component is unavailable: raw native view fed by
+// a polled stream URL. Known limits: stale after a camera restart, no
+// adaptive-stream visibility reporting.
+function RawTrackSurface({ track, mirror, style, zOrder }) {
     const [ url, setUrl ] = useState(() => trackStreamURL(track));
     useEffect(() => {
         setUrl(trackStreamURL(track));
         if (!track) return undefined;
-        // The native stream URL can lag track arrival by a beat — poll until
-        // it materializes.
         const iv = setInterval(() => {
             const next = trackStreamURL(track);
             if (next) {
