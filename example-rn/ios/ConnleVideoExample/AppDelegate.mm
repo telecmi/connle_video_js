@@ -89,20 +89,6 @@ withCompletionHandler:(void (^)(void))completion
   // stay on the system screen — never wanted here).
   BOOL hasVideo = YES;
 
-  // TEMP DEBUG — ground truth of what reaches CallKit; pulled off-device.
-  {
-    NSString *dbgLine = [NSString stringWithFormat:@"%@ report uuid=%@ hasVideo=%d cancel=%d name=%@\n",
-        [NSDate date], uuid, hasVideo, isCancel, callerDisplay];
-    NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-    NSString *dbgPath = [docs stringByAppendingPathComponent:@"callkit-debug.txt"];
-    NSFileHandle *fh = [NSFileHandle fileHandleForWritingAtPath:dbgPath];
-    if (!fh) {
-      [[NSFileManager defaultManager] createFileAtPath:dbgPath contents:nil attributes:nil];
-      fh = [NSFileHandle fileHandleForWritingAtPath:dbgPath];
-    }
-    @try { [fh seekToEndOfFile]; [fh writeData:[dbgLine dataUsingEncoding:NSUTF8StringEncoding]]; [fh closeFile]; } @catch (id e) { }
-  }
-
   // Keep the JS thread scheduled long enough to connect the call on a locked
   // device; otherwise iOS suspends it right after the push.
   UIApplication *app = [UIApplication sharedApplication];

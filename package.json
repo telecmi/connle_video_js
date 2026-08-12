@@ -1,7 +1,7 @@
 {
   "name": "@telecmi/connle-video",
   "title": "Connle Video SDK for Web, Electron, and React Native",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Official Connle video SDK for the browser — high-quality video/audio calls with the same API as React Native.",
   "main": "lib/index.js",
   "types": "index.d.ts",

@@ -2,7 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.1.0] - 2026-08-12
+
+### Added — one SDK call screen for every answered incoming call (Android)
+- The SDK's call screen is THE in-call UI whenever the app's own UI isn't
+  what the user is looking at: lock-screen answers, background answers,
+  notification answers. With the app focused, the call stays in the app.
+  Opt out entirely with `options.ui = { callScreen: 'app' }`.
+- Icon-only round controls (native Material icons bundled as SDK assets):
+  flip camera (shown only while video is on), video on/off, mute, speaker,
+  end — every control drives and reflects the engine's real state.
+- Audio calls (or video not yet flowing) show an avatar — app-customizable
+  via the constructor option `{ avatar: url }`, initial-letter fallback.
+  Caller names render title-cased everywhere.
+- `ConnleVideo.registerColdBoot(factory)` — killed-app answers build the
+  session headlessly from app-stored credentials; no app UI involved.
+- The ongoing-call notification returns to the call screen; unlocking keeps
+  the live call on top; answered calls survive activity relaunches.
+
+### Added / changed — iOS
+- Every incoming call is reported to CallKit as a video call from a
+  phone-number handle; answers complete instantly; the media engine owns
+  the audio session (`audioSession.autoConfigure = false`, LiveKit pattern).
+- Answering follows the call's own media; either side toggles their camera
+  with the Video control at any time.
+- Known iOS behavior: LOCKED answers authenticate and hand into the app;
+  on current iOS, unlocked answers land on the system call screen with the
+  app one tap away (classic-CallKit limitation; LiveCommunicationKit
+  adoption is the planned path to in-app answers everywhere).
+
+### Fixed
+- Camera flip no longer blanks the self-preview (the new native stream is
+  followed continuously); remote video renders under adaptive streaming
+  (element visibility reported via the engine's VideoView); a muted remote
+  camera shows the avatar instead of a frozen frame; remote video is
+  hard full-bleed.
+- The multi-device dismissal cancel can no longer end the call on the
+  device that answered it (Android multi-instance case and the iOS
+  answered-but-connecting race).
+- In-app answers complete the native (Telecom/CallKit) answer transaction.
 
 ### Added — Android lock-screen call experience (SDK-owned, zero app code)
 - **Full-screen ring on the locked phone**: caller name + Answer/Decline over
