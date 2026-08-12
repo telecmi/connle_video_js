@@ -87,10 +87,12 @@ const connle = new ConnleVideo(serverUrl, token, mediaUrl, {
 | `push.apiBase` | production REST | Where the token is registered. |
 | `avatar` | initial-letter circle | Image shown on the Android lock-screen call surface for audio calls (or while video hasn't started). Any image URL. |
 
-### Android lock-screen call surface
+### The SDK call screen (Android)
 
-On a locked phone the SDK owns the entire call experience — the app's own UI
-cannot appear over the keyguard, so the SDK renders its own:
+Every answered incoming call gets the SAME call screen — answered from the
+lock screen, the notification, or inside the open app; phone locked or not.
+One UI, owned by the SDK (apps that want to render their own in-call UI
+instead can opt out with `options.ui = { callScreen: 'app' }`):
 
 - **Ring**: full-screen incoming-call UI (caller name, Answer/Decline) plus a
   heads-up CallStyle notification — the screen wakes even when the OEM blocks
@@ -104,7 +106,8 @@ cannot appear over the keyguard, so the SDK renders its own:
 - **Cold start**: if the push arrives with the app killed, answering boots the
   app invisibly *behind* the call screen; the call completes without the user
   ever seeing a loading screen.
-- **Unlock** at any point hands off seamlessly to your app's own call UI.
+- The screen closes when the call ends, returning to whatever was beneath —
+  your app or the lock screen.
 
 No app code is involved in any of this.
 

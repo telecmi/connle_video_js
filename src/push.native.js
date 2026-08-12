@@ -475,7 +475,10 @@ export default class ConnlePush {
 
     /** Media connected: native call goes ACTIVE and the Telecom-level mute
      *  is asserted OFF (Telecom can bring the call up muted, silencing the
-     *  mic system-wide even though the track publishes). */
+     *  mic system-wide even though the track publishes). For answered
+     *  INCOMING calls the SDK's in-call screen comes up — the ONE call UI no
+     *  matter how or where the call was answered (opt out with
+     *  options.ui.callScreen = 'app'). */
     onMediaConnected( call_id ) {
         const ck = loadCallKeep();
         if ( !ck || !call_id ) return;
@@ -483,12 +486,13 @@ export default class ConnlePush {
         try { ck.setCurrentCallActive( uuid ); } catch { /* ignore */ }
         if ( Platform.OS === 'android' ) {
             try { ck.setMutedCall( uuid, false ); } catch { /* ignore */ }
-            // Show the app over the keyguard ONLY while in a call — a
-            // permanent flag makes any screen-wake reveal the app instead of
-            // the lock screen's ring notification. Setting the flag alone
-            // does not surface an occluded activity: relaunch right after.
-            try { if ( typeof ck.setActivityShowWhenLocked === 'function' ) ck.setActivityShowWhenLocked( true ); } catch { /* ignore */ }
-            setTimeout( () => { try { ck.backToForeground(); } catch { /* ignore */ } }, 250 );
+            const wantsAppUi = !!( this.connle && this.connle.options &&
+                this.connle.options.ui && this.connle.options.ui.callScreen === 'app' );
+            if ( !wantsAppUi && _wasAnsweredHere( uuid ) &&
+                 typeof ck.showInCallScreen === 'function' ) {
+                const name = ( this._callerNames && this._callerNames[ uuid.toLowerCase() ] ) || 'In call';
+                try { ck.showInCallScreen( uuid, name ); } catch { /* ignore */ }
+            }
         }
     }
 
@@ -835,6 +839,13 @@ export default class ConnlePush {
                 }
                 if ( typeof this.connle._onPushCancel === 'function' ) this.connle._onPushCancel( data );
                 return;
+            }
+            // Remembered for the in-call screen title at media connect (also
+            // for cold replays, which skip the ring block below).
+            if ( data.call_id ) {
+                this._callerNames = this._callerNames || {};
+                this._callerNames[ String( data.call_id ).toLowerCase() ] =
+                    data.from_name || data.from || 'In call';
             }
             // Android: ring the native ConnectionService UI — works in every
             // app state, including the background handler. (iOS rings from the
