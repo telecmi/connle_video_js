@@ -456,9 +456,9 @@ export default class ConnlePush {
     // Answer after securing runtime permissions (shared helper) — a denied
     // camera degrades to audio-only, never a crash.
     async _answerWithPermissions() {
-        // Every answered call is a full video call — request both permissions
-        // up front (camera denial degrades to audio-only, never a failure).
-        this.connle.callType = await this.ensureMediaPermissions( { audio: true, video: true } );
+        if ( this.connle.callType ) {
+            this.connle.callType = await this.ensureMediaPermissions( this.connle.callType );
+        }
         // Surface the app after EVERY answer (Android): in a video-calling
         // product the app IS the call UI, audio calls included — immediately,
         // and once more after the Telecom transition settles. (iOS: CallKit

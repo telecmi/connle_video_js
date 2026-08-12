@@ -379,12 +379,11 @@ export default class ConnlySignalling extends EventEmitter {
         this.socket.emit('connle_answer_call', { call_id: this.callId }, async (ack) => {
             if (ack?.code === 200) {
                 if (!this.video.isConnected()) {
-                    // Every ANSWERED call is a full video call on this
-                    // platform — the payload's media only describes what the
-                    // caller started with. (A denied camera permission still
-                    // degrades gracefully below.)
-                    let callType = { audio: true, video: true };
-                    this.callType = callType;
+                    // Answer with the call's OWN media (the payload's
+                    // {audio, video} — the caller's choice). The answerer
+                    // turns their camera on/off with the Video control on
+                    // the call screen at any time.
+                    let callType = this.callType || this.normalizeCallMedia();
                     // Runtime permissions before media (Android): camera denied
                     // on a video call degrades to audio-only instead of the
                     // native capturer aborting the process.
