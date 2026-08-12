@@ -34,7 +34,14 @@ const copy = [
 ];
 for (const f of copy) {
   const src = join(root, f);
-  if (existsSync(src)) cpSync(src, join(out, f), { recursive: true });
+  if (existsSync(src)) {
+    cpSync(src, join(out, f), {
+      recursive: true,
+      // gradle intermediates from in-tree example builds are dead weight
+      // (1.1.0 shipped ~4MB of them — harmless, but never again).
+      filter: (p) => !p.includes('android/build') && !p.includes('android/.gradle'),
+    });
+  }
 }
 // The RN landing page is the package's README.
 cpSync(join(root, 'README.react-native.md'), join(out, 'README.md'));
