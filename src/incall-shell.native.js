@@ -73,13 +73,18 @@ function trackStreamURL(videoTrack) {
     return '';
 }
 
-// Camera video track of a participant, if published and subscribed.
+// Camera video track of a participant, if published, subscribed, and NOT
+// muted — a muted remote camera keeps its track object but delivers no
+// frames, which renders as a frozen last frame; treat it as no-video so the
+// avatar face shows instead.
 function cameraTrack(participant) {
     try {
         if (!participant) return null;
         for (const pub of participant.videoTrackPublications.values()) {
             if (pub.source === 'screen_share') continue;
+            if (pub.isMuted) continue;
             const t = pub.videoTrack || pub.track;
+            if (t && t.isMuted) continue;
             if (t) return t;
         }
     } catch { /* room shape changed underneath us */ }
