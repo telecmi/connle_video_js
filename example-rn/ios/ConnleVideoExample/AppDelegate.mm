@@ -84,6 +84,20 @@ withCompletionHandler:(void (^)(void))completion
   // stay on the system screen — never wanted here).
   BOOL hasVideo = YES;
 
+  // TEMP DEBUG — ground truth of what reaches CallKit; pulled off-device.
+  {
+    NSString *dbgLine = [NSString stringWithFormat:@"%@ report uuid=%@ hasVideo=%d cancel=%d name=%@\n",
+        [NSDate date], uuid, hasVideo, isCancel, callerDisplay];
+    NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+    NSString *dbgPath = [docs stringByAppendingPathComponent:@"callkit-debug.txt"];
+    NSFileHandle *fh = [NSFileHandle fileHandleForWritingAtPath:dbgPath];
+    if (!fh) {
+      [[NSFileManager defaultManager] createFileAtPath:dbgPath contents:nil attributes:nil];
+      fh = [NSFileHandle fileHandleForWritingAtPath:dbgPath];
+    }
+    @try { [fh seekToEndOfFile]; [fh writeData:[dbgLine dataUsingEncoding:NSUTF8StringEncoding]]; [fh closeFile]; } @catch (id e) { }
+  }
+
   // Keep the JS thread scheduled long enough to connect the call on a locked
   // device; otherwise iOS suspends it right after the push.
   UIApplication *app = [UIApplication sharedApplication];
@@ -125,10 +139,13 @@ withCompletionHandler:(void (^)(void))completion
       }];
       return;
     }
-    // Report (iOS 13+ requires it for EVERY VoIP push) then end inside the
-    // completion, dismissing the still-ringing call of the same uuid.
-    // 2 = CXCallEndedReasonRemoteEnded.
-    [RNCallKeep reportNewIncomingCall:uuid
+    // Report (iOS 13+ requires it for EVERY VoIP push) with a throwaway
+    // uuid, then end the RINGING call after a grace period — the cancel is
+    // also sent when THIS device answers (multi-device dismissal), racing
+    // the answer by milliseconds: ending immediately can kill the call the
+    // user just answered. 2 = CXCallEndedReasonRemoteEnded.
+    NSString *dummy2 = [[NSUUID UUID] UUIDString];
+    [RNCallKeep reportNewIncomingCall:dummy2
                                handle:caller
                            handleType:@"generic"
                              hasVideo:NO
@@ -140,9 +157,15 @@ withCompletionHandler:(void (^)(void))completion
                           fromPushKit:YES
                               payload:payload.dictionaryPayload
                 withCompletionHandler:^{
-      [RNCallKeep endCallWithUUID:uuid reason:2];
+      [RNCallKeep endCallWithUUID:dummy2 reason:2];
       completion();
     }];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+      if (![RNCallKeep isCallActive:uuid]) {
+        [RNCallKeep endCallWithUUID:uuid reason:2];
+      }
+    });
   } else {
     [RNCallKeep reportNewIncomingCall:uuid
                                handle:caller
