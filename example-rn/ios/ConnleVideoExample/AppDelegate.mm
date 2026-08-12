@@ -121,7 +121,7 @@ withCompletionHandler:(void (^)(void))completion
     // for the siblings only. Apple still requires reporting a call for every
     // VoIP push, so report a throwaway uuid and end it, leaving the live
     // call untouched.
-    if ([RNCallKeep isCallActive:uuid]) {
+    if ([RNCallKeep isCallActive:uuid] || [RNCallKeep wasCallAnswered:uuid]) {
       NSString *dummy = [[NSUUID UUID] UUIDString];
       [RNCallKeep reportNewIncomingCall:dummy
                                  handle:caller
@@ -163,7 +163,7 @@ withCompletionHandler:(void (^)(void))completion
     }];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
-      if (![RNCallKeep isCallActive:uuid]) {
+      if (![RNCallKeep isCallActive:uuid] && ![RNCallKeep wasCallAnswered:uuid]) {
         [RNCallKeep endCallWithUUID:uuid reason:2];
       }
     });
