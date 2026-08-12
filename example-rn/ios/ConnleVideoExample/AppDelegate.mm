@@ -25,6 +25,7 @@
   [RNCallKeep setup:@{
     @"appName": @"ConnleVideoExample",
     @"supportsVideo": @YES,
+    @"handleType": @"number",
   }];
 
   // Register for VoIP push (PushKit). iOS issues the VoIP token, which the
@@ -124,7 +125,7 @@ withCompletionHandler:(void (^)(void))completion
       NSString *dummy = [[NSUUID UUID] UUIDString];
       [RNCallKeep reportNewIncomingCall:dummy
                                  handle:caller
-                             handleType:@"generic"
+                             handleType:@"number"
                                hasVideo:NO
                     localizedCallerName:callerDisplay
                         supportsHolding:YES
@@ -147,7 +148,7 @@ withCompletionHandler:(void (^)(void))completion
     NSString *dummy2 = [[NSUUID UUID] UUIDString];
     [RNCallKeep reportNewIncomingCall:dummy2
                                handle:caller
-                           handleType:@"generic"
+                           handleType:@"number"
                              hasVideo:NO
                   localizedCallerName:callerDisplay
                       supportsHolding:YES
@@ -169,7 +170,7 @@ withCompletionHandler:(void (^)(void))completion
   } else {
     [RNCallKeep reportNewIncomingCall:uuid
                                handle:caller
-                           handleType:@"generic"
+                           handleType:@"number"
                              hasVideo:hasVideo
                   localizedCallerName:callerDisplay
                       supportsHolding:YES

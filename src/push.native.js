@@ -415,6 +415,9 @@ export default class ConnlePush {
         // Already answered (app UI answered first and flipped the native
         // screen — this event is the echo): do nothing.
         if ( _wasAnsweredHere( uuid ) ) return;
+        // Mark the origin so notifyAnswered() doesn't loop this back into a
+        // second CallKit answer transaction.
+        this._nativeAnswerInFlight = uuid;
         const current = String( this.connle.callId || '' ).toLowerCase();
         if ( current === uuid && this.connle.isConnected ) {
             this._answerWithPermissions();
@@ -702,6 +705,18 @@ export default class ConnlePush {
         const ck = loadCallKeep();
         if ( !ck || !uuid ) return;
         try { ck.reportEndCallWithUUID( String( uuid ), 3 ); } catch { /* ignore */ }
+    }
+
+    /** The app's own UI answered this call: the NATIVE call must be answered
+     *  too, or the OS still thinks it is ringing — on iOS the system then
+     *  presents its own call UI over the app. No-op when the answer
+     *  originated from the native screen (that transaction already ran). */
+    notifyAnswered( call_id ) {
+        const uuid = String( call_id || '' ).toLowerCase();
+        if ( !uuid || this._nativeAnswerInFlight === uuid ) return;
+        const ck = loadCallKeep();
+        if ( !ck ) return;
+        try { ck.answerIncomingCall( uuid ); } catch { /* ignore */ }
     }
 
     /** The app answered this call — the ring backstop must not kill it, and

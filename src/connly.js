@@ -372,6 +372,10 @@ export default class ConnlySignalling extends EventEmitter {
 
         this.answerInFlight = true;
         if (this._push && typeof this._push.markAnswered === 'function') this._push.markAnswered(this.callId);
+        // Complete the NATIVE answer too when the app UI answered first —
+        // otherwise the OS call stays "ringing" (iOS then overlays its own
+        // call UI on the app).
+        if (this._push && typeof this._push.notifyAnswered === 'function') this._push.notifyAnswered(this.callId);
         this.socket.emit('connle_answer_call', { call_id: this.callId }, async (ack) => {
             if (ack?.code === 200) {
                 if (!this.video.isConnected()) {
