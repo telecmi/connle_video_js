@@ -167,6 +167,27 @@ export default function ConnleInCallShell(props) {
           ( session.options.avatar ||
             ( session.options.ui && session.options.ui.avatar ) ) ) || null;
 
+    // THE ANSWER SIGNAL: this surface mounts exactly when the user answers on
+    // the lock screen, with the call's uuid in its props — a delivery channel
+    // that cannot be lost (unlike native event emitters, which have proven
+    // droppable in long-lived processes). Notify the session directly,
+    // retrying until one exists (cold boots included). _handleNativeAnswer is
+    // guarded, so a duplicate notification is a no-op.
+    useEffect(() => {
+        const uuid = String(( props && props.uuid ) || '').toLowerCase();
+        if (!uuid) return undefined;
+        let delivered = false;
+        const iv = setInterval(() => {
+            const s = getActiveSession();
+            if (!s || !s._push || delivered) return;
+            delivered = true;
+            clearInterval(iv);
+            try { s._push._handleNativeAnswer(uuid); } catch { /* ignore */ }
+        }, 300);
+        return () => clearInterval(iv);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Track discovery + real control state + liveness: poll the room — robust
     // against every ordering (cold start, reconnect, late subscription), and
     // the app's own event listeners stay untouched.
