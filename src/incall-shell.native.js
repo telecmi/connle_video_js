@@ -152,7 +152,14 @@ export default function ConnleInCallShell(props) {
     const [ remoteTrack, setRemoteTrack ] = useState(null);
     const [ localTrack, setLocalTrack ] = useState(null);
     const [ muted, setMuted ] = useState(false);
-    const [ videoOff, setVideoOff ] = useState(false);
+    // Start from the call's media type (audio call = camera off) so the Flip
+    // control doesn't flash before the first room-state poll corrects it.
+    const [ videoOff, setVideoOff ] = useState(() => {
+        try {
+            const s = getActiveSession();
+            return !( s && s.callType && s.callType.video );
+        } catch { return true; }
+    });
     const [ speakerOn, setSpeakerOn ] = useState(true);
     const [ mirror, setMirror ] = useState(true);
     const [ seconds, setSeconds ] = useState(0);
@@ -305,7 +312,7 @@ export default function ConnleInCallShell(props) {
             ) : null}
 
             <View style={styles.controls}>
-                <Control icon="flip" onPress={doFlip} />
+                {!videoOff ? <Control icon="flip" onPress={doFlip} /> : null}
                 <Control
                     icon={videoOff ? 'videocam_off' : 'videocam'}
                     active={videoOff}
