@@ -38,7 +38,7 @@ const RNCallKeep: any = NativeModules.RNCallKeep
   ? // eslint-disable-next-line @typescript-eslint/no-var-requires
     require('@telecmi/react-native-callkeep').default
   : null;
-import ConnleVideo from 'connle-video-sdk';
+import ConnleVideo from '@telecmi/connle-video-native';
 
 type CallState = 'idle' | 'incoming' | 'outgoing' | 'active';
 
