@@ -64,6 +64,20 @@ Voice + video in one app: if `@telecmi/piopiy-native` is installed alongside,
 both SDKs share one device token and one background handler through the
 TeleCMI push router — payloads route by `type`, with zero configuration.
 
+> [!IMPORTANT]
+> **Installing both TeleCMI SDKs?** They pin different versions of the shared
+> call-UI module, so npm installs **two copies** while Android compiles only
+> one. Force a single copy in your app's `package.json`:
+>
+> ```json
+> "overrides": { "@telecmi/react-native-callkeep": "4.4.3" }
+> ```
+>
+> (yarn: `resolutions`.) With both SDKs present, calls ring on the **OS call
+> UI** for both — the phone account is app-wide, and a voice SDK needs the
+> system UI. The custom Android call surfaces described below therefore apply
+> to **video-only apps**.
+
 ## React Native–only API
 
 Everything below exists only in `@telecmi/connle-video-native` (the browser
