@@ -457,6 +457,11 @@ export default function App(): React.JSX.Element {
     wireEvents(connleai);
     setStatus('Connecting…');
     connleai.connect();
+    // Ask for camera + mic ONCE here, while the app is on screen. Android
+    // cannot show a permission dialog over the lock screen, so a call
+    // answered there before the grant exists connects without media (and
+    // the Video control silently fails with "Permission denied").
+    requestMediaPermissions(true).catch(() => {});
   }, [serverUrl, mediaUrl, wireEvents]);
 
   const connectWithStored = useCallback((storedToken: string, emailV: string, passwordV: string) => {
