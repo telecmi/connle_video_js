@@ -39,8 +39,20 @@ function createRouter() {
     let unrouted = null;
     const tokenSubs = [];
     let lastToken = null;
+    let osOwner = null;           // SDK that installed the OS push listeners
+
     return {
-        version: 1,
+        version: 2,
+        /** Claim the OS push APIs (FCM handler / iOS PushKit listeners). Only
+         *  the winner may install them: react-native-voip-push-notification
+         *  keeps ONE listener per event and REMOVES the previous one, so a
+         *  second SDK registering would silently kill the first SDK's pushes.
+         *  The loser receives everything through dispatch()/onToken(). */
+        claimOS( name ) {
+            if ( !osOwner ) osOwner = name || 'unnamed';
+            return osOwner === ( name || 'unnamed' );
+        },
+        osOwnerName() { return osOwner; },
         register( types, handler, opts ) {
             ( types || [] ).forEach( ( t ) => routes.set( t, handler ) );
             if ( opts && opts.isDefault ) defaultHandler = handler;
@@ -644,6 +656,16 @@ export default class ConnlePush {
     }
 
     _claimAloneInner( router ) {
+        // Only ONE SDK may install the OS push listeners (iOS PushKit keeps a
+        // single listener per event and DROPS the previous one — a second
+        // registration silently kills the first SDK's calls; Android allows one
+        // background handler). If a co-resident TeleCMI SDK owns them, our
+        // payload types still arrive through the router's dispatch, and the
+        // device token through onToken (already subscribed in start()).
+        if ( typeof router.claimOS === 'function' && !router.claimOS( 'connle-video' ) ) {
+            dbg( 'another TeleCMI SDK owns the OS push APIs — receiving via the shared router' );
+            return;
+        }
         if ( Platform.OS === 'android' ) {
             this._ensureNotificationPermission();
             const messaging = loadMessaging();
