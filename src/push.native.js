@@ -419,6 +419,13 @@ export default class ConnlePush {
     }
 
     _handleNativeAnswer( uuid ) {
+        // Not one of OUR calls? Ignore it. In an app that also runs the voice
+        // SDK there is ONE native call UI, so its events arrive here too —
+        // adopting a voice call would answer it against a video session.
+        if ( !this._ownsCall( uuid ) ) {
+            dbg( 'native answer ignored — not a video call:', uuid );
+            return;
+        }
         // Already answered (app UI answered first and flipped the native
         // screen — this event is the echo): do nothing.
         if ( _wasAnsweredHere( uuid ) ) return;
@@ -703,6 +710,22 @@ export default class ConnlePush {
         } else {
             dbg( 'device token held — registering when connected' );
         }
+    }
+
+    /** Is this native call one of OURS? A video call this SDK rang, is
+     *  currently handling, or already answered. Everything else belongs to
+     *  another SDK sharing the same native call module (voice), or to a call
+     *  this instance never saw. */
+    _ownsCall( uuid ) {
+        const id = String( uuid || '' ).toLowerCase();
+        if ( !id ) return false;
+        if ( String( this.connle && this.connle.callId || '' ).toLowerCase() === id ) return true;
+        if ( _wasAnsweredHere( id ) ) return true;
+        if ( this._callerNames && this._callerNames[ id ] ) return true;          // we rang it
+        if ( this._ringTimers && this._ringTimers[ id ] ) return true;            // ringing now
+        if ( _coldPending && String( _coldPending.call_id ).toLowerCase() === id ) return true;
+        if ( _coldAnswer === id ) return true;
+        return false;
     }
 
     /** End the native (Telecom/CallKit) call for a uuid the SDK gave up on —
