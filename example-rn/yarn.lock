@@ -1882,6 +1882,13 @@
   resolved "https://registry.npmjs.org/@livekit/mutex/-/mutex-1.1.1.tgz"
   integrity sha512-EsshAucklmpuUAfkABPxJNhzj9v2sG7JuzFDL4ML1oJQSV14sqrpTYnsaOudMAw9yOaW53NU3QQTlUQoRs4czw==
 
+"@livekit/protocol@1.36.1":
+  version "1.36.1"
+  resolved "https://registry.npmjs.org/@livekit/protocol/-/protocol-1.36.1.tgz"
+  integrity sha512-nN3QnITAQ5yXk7UKfotH7CRWIlEozNWeKVyFJ0/+dtSzvWP/ib+10l1DDnRYi3A1yICJOGAKFgJ5d6kmi1HCUA==
+  dependencies:
+    "@bufbuild/protobuf" "^1.10.0"
+
 "@livekit/protocol@1.50.4":
   version "1.50.4"
   resolved "https://registry.npmjs.org/@livekit/protocol/-/protocol-1.50.4.tgz"
@@ -1889,7 +1896,7 @@
   dependencies:
     "@bufbuild/protobuf" "^1.10.0"
 
-"@livekit/react-native-webrtc@^125.0.12":
+"@livekit/react-native-webrtc@^125.0.12", "@livekit/react-native-webrtc@~125.0.12":
   version "125.0.12"
   resolved "https://registry.npmjs.org/@livekit/react-native-webrtc/-/react-native-webrtc-125.0.12.tgz"
   integrity sha512-J69DIF9sA0R7yhpcbEavN9EoVXNYZP8Ulfkjd3NVgrOrIz0DEAt5bSvM0XDDdfF3k4OdFtcBwDFDkRqjIVJtZA==
@@ -1898,7 +1905,7 @@
     debug "4.3.4"
     event-target-shim "6.0.2"
 
-"@livekit/react-native@2.8.0":
+"@livekit/react-native@~2.8.0":
   version "2.8.0"
   resolved "https://registry.npmjs.org/@livekit/react-native/-/react-native-2.8.0.tgz"
   integrity sha512-qUEPomTlHykwYH7nP3oEEfUEy7StLQoCJulDw++oCkYQ2GI+HRfF6VginklHgM/HjVZmmzWP3+ZjesBWGYFC0g==
@@ -2383,10 +2390,27 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@telecmi/react-native-callkeep@^4.3.17":
-  version "4.3.17"
-  resolved "https://registry.npmjs.org/@telecmi/react-native-callkeep/-/react-native-callkeep-4.3.17.tgz"
-  integrity sha512-9Nb4SxvGwZenksD0IhUia+01UBhn8SjRCugqIcl5KqgPmTaZi+61UjN7UhBd5rqA5jhKtrt5o/RzHz1onSfXdA==
+"@socket.io/component-emitter@~3.1.0":
+  version "3.1.2"
+  resolved "https://registry.npmjs.org/@socket.io/component-emitter/-/component-emitter-3.1.2.tgz"
+  integrity sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==
+
+"@telecmi/connle-video-native@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.npmjs.org/@telecmi/connle-video-native/-/connle-video-native-1.1.0.tgz"
+  integrity sha512-R7AiOVuKSA+QARw3Uyp5WNTBq8b9vmj8dfBZrT4CpYqbV3PcxSoO31Q4KA45ecs9JTK7molNJuHEUGh2xRJwjQ==
+  dependencies:
+    "@livekit/react-native" "~2.8.0"
+    "@livekit/react-native-webrtc" "~125.0.12"
+    "@telecmi/react-native-callkeep" "4.4.0"
+    livekit-client "~2.11.2"
+    react-native-voip-push-notification "^3.3.3"
+    socket.io-client "^4.8.0"
+
+"@telecmi/react-native-callkeep@4.4.0":
+  version "4.4.0"
+  resolved "https://registry.npmjs.org/@telecmi/react-native-callkeep/-/react-native-callkeep-4.4.0.tgz"
+  integrity sha512-rDaUcFsl0DZPbhX+lwkqThgIX8pOwyh02+iJ9mRQp5Q7uLqilGI7Iczsuxs9DShdkG528B/18DipQzFgWec55Q==
 
 "@types/babel__core@^7.1.14":
   version "7.20.5"
@@ -3476,7 +3500,7 @@ debug@^2.6.9:
   dependencies:
     ms "2.0.0"
 
-debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.2, debug@^4.3.4, debug@^4.4.3:
+debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.2, debug@^4.3.4, debug@^4.4.3, debug@~4.4.1:
   version "4.4.3"
   resolved "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz"
   integrity sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==
@@ -3621,6 +3645,22 @@ encodeurl@~2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz"
   integrity sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==
+
+engine.io-client@~6.6.1:
+  version "6.6.6"
+  resolved "https://registry.npmjs.org/engine.io-client/-/engine.io-client-6.6.6.tgz"
+  integrity sha512-iY6QdftLQ9pyiPoX082bpf/u1UewnOaJrtJIF9T0++QB34lZrj0uP+Q/bj8AlUsAxqhnkTV2BS8SBZSxOmoV5Q==
+  dependencies:
+    "@socket.io/component-emitter" "~3.1.0"
+    debug "~4.4.1"
+    engine.io-parser "~5.2.1"
+    ws "~8.21.0"
+    xmlhttprequest-ssl "~2.1.1"
+
+engine.io-parser@~5.2.1:
+  version "5.2.3"
+  resolved "https://registry.npmjs.org/engine.io-parser/-/engine.io-parser-5.2.3.tgz"
+  integrity sha512-HqD3yTBfnBxIrbnM1DoD6Pcq8NECnh8d4As1Qgh0z5Gg3jRRIqijury0CL3ghu/edArpUYiYqQiDUQBIs4np3Q==
 
 env-paths@^2.2.1:
   version "2.2.1"
@@ -4281,11 +4321,6 @@ fs.realpath@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
-
-fsevents@^2.3.2:
-  version "2.3.3"
-  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
-  integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
 function-bind@^1.1.2:
   version "1.1.2"
@@ -5511,6 +5546,21 @@ livekit-client@^2.17.2, livekit-client@^2.18.2, livekit-client@^2.9.0:
     tslib "2.8.1"
     typed-emitter "^2.1.0"
     webrtc-adapter "9.0.6"
+
+livekit-client@~2.11.2:
+  version "2.11.4"
+  resolved "https://registry.npmjs.org/livekit-client/-/livekit-client-2.11.4.tgz"
+  integrity sha512-V82NdyhHo3iBxxQmPTk95Fe2+VZMABWZL56t9oZmMgycoF8li8gs/KG7yyDsKki50EeKLgwOmlwqx/Xf0pc0+Q==
+  dependencies:
+    "@livekit/mutex" "1.1.1"
+    "@livekit/protocol" "1.36.1"
+    events "^3.3.0"
+    loglevel "^1.9.2"
+    sdp-transform "^2.15.0"
+    ts-debounce "^4.0.0"
+    tslib "2.8.1"
+    typed-emitter "^2.1.0"
+    webrtc-adapter "^9.0.1"
 
 locate-path@^3.0.0:
   version "3.0.0"
@@ -7051,6 +7101,24 @@ slice-ansi@^2.0.0:
     astral-regex "^1.0.0"
     is-fullwidth-code-point "^2.0.0"
 
+socket.io-client@^4.8.0:
+  version "4.8.3"
+  resolved "https://registry.npmjs.org/socket.io-client/-/socket.io-client-4.8.3.tgz"
+  integrity sha512-uP0bpjWrjQmUt5DTHq9RuoCBdFJF10cdX9X+a368j/Ft0wmaVgxlrjvK3kjvgCODOMMOz9lcaRzxmso0bTWZ/g==
+  dependencies:
+    "@socket.io/component-emitter" "~3.1.0"
+    debug "~4.4.1"
+    engine.io-client "~6.6.1"
+    socket.io-parser "~4.2.4"
+
+socket.io-parser@~4.2.4:
+  version "4.2.7"
+  resolved "https://registry.npmjs.org/socket.io-parser/-/socket.io-parser-4.2.7.tgz"
+  integrity sha512-IH/iSeO9T6gz1KkFleGDWkG9N3dl4jXVYUtMhIqH10Md0ttMer8nUNWiP1DKuNrybD2xBrixLJdCC9J6ECoYkg==
+  dependencies:
+    "@socket.io/component-emitter" "~3.1.0"
+    debug "~4.4.1"
+
 source-map-support@^0.5.16:
   version "0.5.21"
   resolved "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.21.tgz"
@@ -7344,6 +7412,11 @@ ts-api-utils@^1.3.0:
   resolved "https://registry.npmjs.org/ts-api-utils/-/ts-api-utils-1.4.3.tgz"
   integrity sha512-i3eMG77UTMD0hZhgRS562pv83RC6ukSAC2GMNWc+9dieh/+jDM5u5YG+NHX6VNDRHQcHwmsTHctP9LhbC3WxVw==
 
+ts-debounce@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.npmjs.org/ts-debounce/-/ts-debounce-4.0.0.tgz"
+  integrity sha512-+1iDGY6NmOGidq7i7xZGA4cm8DAa6fqdYcvO5Z6yBevH++Bdo9Qt/mN0TzHUgcCcKv1gmh9+W5dHqz8pMWbCbg==
+
 tslib@^1.8.1:
   version "1.14.1"
   resolved "https://registry.npmjs.org/tslib/-/tslib-1.14.1.tgz"
@@ -7578,7 +7651,7 @@ webidl-conversions@^5.0.0:
   resolved "https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-5.0.0.tgz"
   integrity sha512-VlZwKPCkYKxQgeSbH5EyngOmRp7Ww7I9rQLERETtf5ofd9pGeswWiOtogpEO850jziPRarreGxn5QIiTqpb2wA==
 
-webrtc-adapter@9.0.6:
+webrtc-adapter@^9.0.1, webrtc-adapter@9.0.6:
   version "9.0.6"
   resolved "https://registry.npmjs.org/webrtc-adapter/-/webrtc-adapter-9.0.6.tgz"
   integrity sha512-CHbl2ZQbxx164IgWRgzJno4hWtM4tFbRam1QfI3Yxhs3w/DvqluVxVWeXs3oL5/fbGkSNLKo0Ty5MgUWceNhog==
@@ -7755,6 +7828,16 @@ ws@^7.5.10:
   version "7.5.11"
   resolved "https://registry.npmjs.org/ws/-/ws-7.5.11.tgz"
   integrity sha512-zS54Oen9bITtp7kp2XM3AydrCIq1D+HwJOuH+c+e4LfpL/lotP5osijd+UoMnxwAam1GN8R4KtLAyIrIcBNpiA==
+
+ws@~8.21.0:
+  version "8.21.3"
+  resolved "https://registry.npmjs.org/ws/-/ws-8.21.3.tgz"
+  integrity sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==
+
+xmlhttprequest-ssl@~2.1.1:
+  version "2.1.2"
+  resolved "https://registry.npmjs.org/xmlhttprequest-ssl/-/xmlhttprequest-ssl-2.1.2.tgz"
+  integrity sha512-TEU+nJVUUnA4CYJFLvK5X9AOeH4KvDvhIfm0vV1GaQRtchnG0hgK5p8hw/xjv8cunWYCsiPCSDzObPyhEwq3KQ==
 
 y18n@^4.0.0:
   version "4.0.3"
