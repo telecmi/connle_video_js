@@ -65,9 +65,11 @@ both SDKs share one device token and one background handler through the
 TeleCMI push router — payloads route by `type`, with zero configuration.
 
 > [!IMPORTANT]
-> **Installing both TeleCMI SDKs?** They pin different versions of the shared
-> call-UI module, so npm installs **two copies** while Android compiles only
-> one. Force a single copy in your app's `package.json`:
+> **Installing both TeleCMI SDKs?** From `@telecmi/piopiy-native` 0.26.3 both
+> SDKs pin the same range of the shared call-UI module (`^4.4.3`) and npm
+> installs exactly **one** copy — nothing to configure. Only when the app has
+> piopiy ≤ 0.26.2 (old exact pin → npm installs two copies, Android compiles
+> one) force a single copy in the app's `package.json`:
 >
 > ```json
 > "overrides": { "@telecmi/react-native-callkeep": "4.4.3" }
