@@ -39,7 +39,9 @@ for (const f of copy) {
       recursive: true,
       // gradle intermediates from in-tree example builds are dead weight
       // (1.1.0 shipped ~4MB of them — harmless, but never again).
-      filter: (p) => !p.includes('android/build') && !p.includes('android/.gradle'),
+      filter: (p) => !p.includes('android/build/') && !p.endsWith('android/build') && !p.includes('android/.gradle'),
+      // ('android/build' as a bare prefix also matched android/build.gradle —
+      // 1.1.2/1.1.3 shipped WITHOUT it and broke autolinking entirely)
     });
   }
 }
