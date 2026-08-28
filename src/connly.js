@@ -361,7 +361,14 @@ export default class ConnlySignalling extends EventEmitter {
 
     answer(callback) {
         if (!this.isConnected) {
-            this.emitError({ code: 'NOT_CONNECTED', message: 'Not connected to call' });
+            // Answer arrived before the signalling socket is up (native answer
+            // on a killed/backgrounded app). Queue it for the connect and kick
+            // a connect attempt NOW — the RN host may have frozen the
+            // reconnect timers while a native call activity was frontmost.
+            this.once('connect', () => { this.answer(callback); });
+            if (this.token && typeof this.connect === 'function') {
+                this.connect();
+            }
             return;
         }
         if (!this.callId) {
@@ -390,7 +397,14 @@ export default class ConnlySignalling extends EventEmitter {
                     if (this._push && typeof this._push.ensureMediaPermissions === 'function') {
                         try { callType = await this._push.ensureMediaPermissions(callType); } catch { /* keep */ }
                     }
-                    this.connectMedia(callType.audio, callType.video, this.room_token);
+                    // Prefer the join token from the answer ack — the one
+                    // cached at ring time can be stale (short TTL) when the
+                    // answer was parked across a reconnect.
+                    const mediaToken = (ack && (ack.token || ack.room_token))
+                        || this.room_token
+                        || (this.pendingIncomingCall && (this.pendingIncomingCall.token || this.pendingIncomingCall.room_token));
+                    if (mediaToken) this.room_token = mediaToken;
+                    this.connectMedia(callType.audio, callType.video, mediaToken);
                 }
             } else {
                 this.emitError(ack || { code: 'ANSWER_FAILED', message: 'Answer failed' });

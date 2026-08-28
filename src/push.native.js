@@ -182,12 +182,14 @@ function loadCallKeep() {
                     cancelButton: 'Cancel',
                     okButton: 'OK',
                     additionalPermissions: [],
-                    // Self-managed (the WhatsApp model, team's choice): no
-                    // system call UI — the SDK's CallStyle notification rings,
-                    // the app is the entire in-call experience. Requires the
-                    // bundled callkeep >= 4.3.19. Set false for the classic
-                    // system call screen instead.
-                    selfManaged: true,
+                    // With callkeep >= 4.5.0 the app holds TWO phone
+                    // accounts and every call picks one by hasVideo: video/team
+                    // calls ring self-managed (SDK call screens), voice rings
+                    // system-managed (OS call UI). setup() no longer decides
+                    // the account kind, so don't request self-managed here —
+                    // doing so would flip a co-resident voice SDK's calls off
+                    // the OS UI.
+                    selfManaged: false,
                     // Native OS-side ring timeout (fork >= 4.3.18): survives the
                     // headless JS context AND total network loss — the ring can
                     // never outlive the server's 35s no-answer window by much.
@@ -347,6 +349,9 @@ function _handleColdPush( raw ) {
     }
 }
 
+// Reachable from the app/native layer (headless contexts).
+globalThis.__connleHandleColdPush = _handleColdPush;
+
 ( function registerBackgroundHandlerEarly() {
     if ( Platform.OS !== 'android' ) return;
     const messaging = loadMessaging();
@@ -431,26 +436,26 @@ export default class ConnlePush {
     }
 
     _handleNativeAnswer( uuid ) {
-        // Not one of OUR calls? Ignore it. In an app that also runs the voice
-        // SDK there is ONE native call UI, so its events arrive here too —
-        // adopting a voice call would answer it against a video session.
-        if ( !this._ownsCall( uuid ) ) {
-            dbg( 'native answer ignored — not a video call:', uuid );
-            return;
-        }
+        // NOTE: no ownership pre-check here. A cold answer (killed app, ring
+        // shown natively) reaches JS BEFORE any session state exists, so a
+        // "do we own this call?" test rejects legitimate answers. Adopt the
+        // uuid; a genuinely foreign call simply fails the server-side answer.
+        uuid = String( uuid || '' ).toLowerCase();
+        if ( !uuid ) return;
         // Already answered (app UI answered first and flipped the native
         // screen — this event is the echo): do nothing.
         if ( _wasAnsweredHere( uuid ) ) return;
         // Mark the origin so notifyAnswered() doesn't loop this back into a
         // second CallKit answer transaction.
         this._nativeAnswerInFlight = uuid;
-        const current = String( this.connle.callId || '' ).toLowerCase();
-        if ( current === uuid && this.connle.isConnected ) {
+        if ( !this.connle.callId || String( this.connle.callId ).toLowerCase() !== uuid ) {
+            this.connle.callId = uuid;
+        }
+        if ( this.connle.isConnected ) {
             this._answerWithPermissions();
         } else {
-            // Not actionable yet — either the invite hasn't reached JS (push
-            // launched a killed app) or the socket is down (lock-screen answer
-            // while backgrounded drops it). Parked; completed by _onPush when
+            // Socket down (lock-screen answer while backgrounded) or the
+            // invite hasn't reached JS yet. Parked; completed by _onPush when
             // the invite arrives OR by onConnected() when the socket is back.
             dbg( 'native answer parked (invite/socket not ready):', uuid );
             this._pendingNativeAnswer = uuid;
@@ -461,7 +466,7 @@ export default class ConnlePush {
             // down until the server times the call out. Kick a fresh connect
             // NOW (the initial attempt is not timer-driven); onConnected()
             // completes this park.
-            if ( !this.connle.isConnected && this.connle.token ) {
+            if ( this.connle.token ) {
                 dbg( 'socket down at answer — forcing reconnect' );
                 try { this.connle.connect(); } catch { /* ignore */ }
             }
@@ -803,7 +808,12 @@ export default class ConnlePush {
             dbg( 'parked answer expired, not completing:', pending );
             this._endNativeCall( pending );
             this._pendingNativeAnswer = null;
-        } else if ( pending && String( this.connle.callId || '' ).toLowerCase() === pending ) {
+        } else if ( pending ) {
+            // Parked native answer: adopt its uuid if the invite never
+            // reached JS (cold answer), then complete the answer.
+            if ( !this.connle.callId ) {
+                this.connle.callId = pending;
+            }
             this._pendingNativeAnswer = null;
             dbg( 'completing parked native answer on reconnect:', pending );
             this._answerWithPermissions();
@@ -918,6 +928,14 @@ export default class ConnlePush {
             // app state, including the background handler. (iOS rings from the
             // AppDelegate's CallKit report; JS only mirrors state there.)
             if ( Platform.OS === 'android' && data.call_id && !data._alreadyRang ) {
+                // Answered already (parked native answer / app answer racing
+                // the invite): ringing now would show Answer on a live call.
+                const rid = String( data.call_id ).toLowerCase();
+                if ( _wasAnsweredHere( data.call_id )
+                    || ( this._pendingNativeAnswer && this._pendingNativeAnswer === rid ) ) {
+                    dbg( 'native Android ring skipped — call already answered:', data.call_id );
+                    return;
+                }
                 const ck = loadCallKeep();
                 if ( ck ) {
                     this._wireNativeCallEvents( ck );

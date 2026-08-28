@@ -18,6 +18,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     AppRegistry,
     Image,
+    NativeModules,
     Platform,
     StyleSheet,
     Text,
@@ -195,6 +196,9 @@ export default function ConnleInCallShell(props) {
     const [ mirror, setMirror ] = useState(true);
     const [ seconds, setSeconds ] = useState(0);
     const [ live, setLive ] = useState(true);
+    // State mirror of wasConnectedRef: a ref change alone never re-renders,
+    // so the header would sit on "Connecting…" after the room connected.
+    const [ connected, setConnected ] = useState(false);
     const startRef = useRef(Date.now());
     const wasConnectedRef = useRef(false);
 
@@ -214,13 +218,25 @@ export default function ConnleInCallShell(props) {
     useEffect(() => {
         const uuid = String(( props && props.uuid ) || '').toLowerCase();
         if (!uuid) return undefined;
-        let delivered = false;
+        let attempts = 0;
         const iv = setInterval(() => {
             const s = getActiveSession();
-            if (!s || !s._push || delivered) return;
-            delivered = true;
-            clearInterval(iv);
-            try { s._push._handleNativeAnswer(uuid); } catch { /* ignore */ }
+            if (!s) return;
+            attempts++;
+            try {
+                if (s._push) {
+                    s._push._handleNativeAnswer(uuid);
+                } else if (typeof s.answer === 'function') {
+                    s.answer(() => { });
+                }
+            } catch { /* ignore */ }
+            // Keep nudging until the media room is actually connected — a
+            // single delivery can land while the socket is still down and
+            // the park then dies with the frozen timers. Guarded handlers
+            // make the repeats no-ops once the answer took.
+            const isConnected = !!( s.video && s.video.isConnected && s.video.isConnected() )
+                || !!( s.video && s.video.room && s.video.room.state === 'connected' );
+            if (isConnected || attempts >= 30) clearInterval(iv);
         }, 300);
         return () => clearInterval(iv);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,14 +267,19 @@ export default function ConnleInCallShell(props) {
                 if (typeof s.video.speakerOn === 'boolean') setSpeakerOn(s.video.speakerOn);
                 // "Ended" only on a connected -> disconnected TRANSITION —
                 // during setup the room exists but is still connecting.
-                const connectedNow = !!( s.video.isConnected && s.video.isConnected() );
+                const connectedNow = !!( s.video.isConnected && s.video.isConnected() )
+                    || !!( room && room.state === 'connected' );
                 if (connectedNow && !wasConnectedRef.current) {
                     wasConnectedRef.current = true;
+                    setConnected(true);
                     startRef.current = Date.now(); // talk time starts here
                 }
-                if (!connectedNow && wasConnectedRef.current) setLive(false);
+                if (!connectedNow && wasConnectedRef.current) {
+                    setLive(false);
+                    setConnected(false);
+                }
             } catch { /* transient room state */ }
-        }, 500);
+        }, 400);
         return () => clearInterval(iv);
     }, []);
 
@@ -268,6 +289,22 @@ export default function ConnleInCallShell(props) {
         }, 1000);
         return () => clearInterval(iv);
     }, []);
+
+    // Call over: end the Telecom call and close the native screen — belt and
+    // braces alongside the activity's own connection watchdog.
+    useEffect(() => {
+        if (live) return undefined;
+        const timer = setTimeout(() => {
+            try {
+                const ck = NativeModules.RNCallKeep;
+                if (ck) {
+                    if (ck.endAllCalls) ck.endAllCalls();
+                    if (ck.closeInCallScreen) ck.closeInCallScreen();
+                }
+            } catch { /* ignore */ }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [live]);
 
     const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
     const ss = String(seconds % 60).padStart(2, '0');
@@ -302,8 +339,21 @@ export default function ConnleInCallShell(props) {
         if (s) {
             try { s.hangup(() => { }); } catch { /* ignore */ }
         }
-        // The native activity watches the Telecom connection and closes
-        // itself when the call dies — nothing else to do here.
+        try {
+            const ck = NativeModules.RNCallKeep;
+            if (ck) {
+                if (ck.endAllCalls) ck.endAllCalls();
+                if (ck.closeInCallScreen) ck.closeInCallScreen();
+            }
+        } catch { /* ignore */ }
+        // Re-broadcast shortly after: the first close can race the answer
+        // transition and be swallowed by ignoreNextClose.
+        setTimeout(() => {
+            try {
+                const ck = NativeModules.RNCallKeep;
+                if (ck && ck.closeInCallScreen) ck.closeInCallScreen();
+            } catch { /* ignore */ }
+        }, 500);
     };
 
     const showVideo = !!remoteTrack;
@@ -319,7 +369,7 @@ export default function ConnleInCallShell(props) {
                     <Avatar name={name} uri={avatarUri} />
                     <Text style={styles.audioName}>{name}</Text>
                     <Text style={styles.audioState}>
-                        {live ? ( wasConnectedRef.current ? `${mm}:${ss}` : 'Connecting…' ) : 'Call ended'}
+                        {live ? ( ( connected || wasConnectedRef.current ) ? `${mm}:${ss}` : 'Connecting…' ) : 'Call ended'}
                     </Text>
                 </View>
             )}
@@ -338,7 +388,7 @@ export default function ConnleInCallShell(props) {
             {showVideo ? (
                 <View style={styles.topBar}>
                     <Text style={styles.topName}>{name}</Text>
-                    <Text style={styles.topTimer}>{live ? `${mm}:${ss}` : 'Ended'}</Text>
+                    <Text style={styles.topTimer}>{live ? ( ( connected || wasConnectedRef.current ) ? `${mm}:${ss}` : 'Connecting…' ) : 'Ended'}</Text>
                 </View>
             ) : null}
 

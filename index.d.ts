@@ -35,6 +35,8 @@ export default class ConnleVideo {
       autoPush?: boolean;
       /** Override the push REST endpoints (testing/staging). */
       push?: { apiBase?: string; registerPath?: string; unregisterPath?: string };
+      /** 'sdk' (default): answered incoming calls open the SDK call screen; 'app': stay in the app UI. */
+      ui?: { callScreen?: 'app' | 'sdk'; avatar?: string };
     },
   );
 
