@@ -41,8 +41,29 @@ function createRouter() {
     let lastToken = null;
     let osOwner = null;           // SDK that installed the OS push listeners
 
+    const callOwners = new Map();  // uuid -> SDK name (capped FIFO)
+
     return {
-        version: 2,
+        version: 3,
+        /** Per-call ownership: the SDK that RINGS a call claims its uuid, so
+         *  native answer/end events (broadcast to every SDK) are acted on
+         *  only by the SDK that owns the call. Idempotent; returns the
+         *  owner's name. */
+        claimCall( uuid, owner ) {
+            const id = String( uuid || '' ).toLowerCase();
+            if ( !id ) return null;
+            if ( !callOwners.has( id ) ) {
+                callOwners.set( id, owner || 'unnamed' );
+                if ( callOwners.size > 50 ) {
+                    callOwners.delete( callOwners.keys().next().value );
+                }
+            }
+            return callOwners.get( id );
+        },
+        /** Who rang this uuid (null = unknown/cold — adopt at your own risk). */
+        callOwner( uuid ) {
+            return callOwners.get( String( uuid || '' ).toLowerCase() ) || null;
+        },
         /** Claim the OS push APIs (FCM handler / iOS PushKit listeners). Only
          *  the winner may install them: react-native-voip-push-notification
          *  keeps ONE listener per event and REMOVES the previous one, so a
@@ -81,7 +102,23 @@ function createRouter() {
 function getPushRouter() {
     const g = ( typeof globalThis !== 'undefined' ) ? globalThis : {};
     if ( !g[ ROUTER_KEY ] ) g[ ROUTER_KEY ] = createRouter();
-    return g[ ROUTER_KEY ];
+    const r = g[ ROUTER_KEY ];
+    // An older co-resident SDK may have installed a v2 router (no per-call
+    // ownership). Upgrade it in place — same contract as v3.
+    if ( typeof r.claimCall !== 'function' ) {
+        const callOwners = new Map();
+        r.claimCall = ( uuid, owner ) => {
+            const id = String( uuid || '' ).toLowerCase();
+            if ( !id ) return null;
+            if ( !callOwners.has( id ) ) {
+                callOwners.set( id, owner || 'unnamed' );
+                if ( callOwners.size > 50 ) callOwners.delete( callOwners.keys().next().value );
+            }
+            return callOwners.get( id );
+        };
+        r.callOwner = ( uuid ) => callOwners.get( String( uuid || '' ).toLowerCase() ) || null;
+    }
+    return r;
 }
 
 // ---------------------------------------------------------------------------
@@ -334,6 +371,7 @@ function _handleColdPush( raw ) {
         return;
     }
     if ( data.type !== 'video_call' ) return;
+    try { getPushRouter().claimCall( data.call_id, 'connle-video' ); } catch { /* ignore */ }
     _coldPending = data;
     _invokeColdBoot(); // start forming the session while the phone rings
     if ( ck ) {
@@ -442,6 +480,17 @@ export default class ConnlePush {
         // uuid; a genuinely foreign call simply fails the server-side answer.
         uuid = String( uuid || '' ).toLowerCase();
         if ( !uuid ) return;
+        // Rung by a co-resident TeleCMI SDK (e.g. a piopiy voice call)? Its
+        // owner handles this event — adopting it here would answer/end a
+        // foreign call against a video session. Unknown uuids stay adoptable:
+        // a cold answer can reach JS before any ring state exists.
+        try {
+            const owner = getPushRouter().callOwner( uuid );
+            if ( owner && owner !== 'connle-video' ) {
+                dbg( 'native answer ignored — call owned by', owner, ':', uuid );
+                return;
+            }
+        } catch { /* ignore */ }
         // Already answered (app UI answered first and flipped the native
         // screen — this event is the echo): do nothing.
         if ( _wasAnsweredHere( uuid ) ) return;
@@ -474,6 +523,13 @@ export default class ConnlePush {
     }
 
     _handleNativeEnd( uuid ) {
+        try {
+            const owner = getPushRouter().callOwner( uuid );
+            if ( owner && owner !== 'connle-video' ) {
+                dbg( 'native end ignored — call owned by', owner, ':', uuid );
+                return;
+            }
+        } catch { /* ignore */ }
         if ( this._pendingNativeAnswer === uuid ) this._pendingNativeAnswer = null;
         const current = String( this.connle.callId || '' ).toLowerCase();
         if ( current !== uuid ) return;
@@ -920,6 +976,7 @@ export default class ConnlePush {
             // Remembered for the in-call screen title at media connect (also
             // for cold replays, which skip the ring block below).
             if ( data.call_id ) {
+                try { getPushRouter().claimCall( data.call_id, 'connle-video' ); } catch { /* ignore */ }
                 this._callerNames = this._callerNames || {};
                 this._callerNames[ String( data.call_id ).toLowerCase() ] =
                     data.from_name || data.from || 'In call';
