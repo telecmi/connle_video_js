@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-08-20
+
+### Changed — custom video call screens return to combined apps
+- Bundled `@telecmi/react-native-callkeep` moves to **^4.5.0** (required):
+  two Android phone accounts — video/team calls ring self-managed on the
+  SDK's custom call screens, a co-resident voice SDK's calls ring
+  system-managed on the OS call UI — routed per call. The SDK no longer
+  requests `selfManaged` at setup.
+- Answered incoming calls open the SDK call screen even with the app
+  foregrounded (opt out: `options.ui = { callScreen: 'app' }`).
+
+### Fixed
+- Answer before the signalling socket is up (native answer on a killed or
+  backgrounded app) is queued and completed at connect instead of failing
+  `NOT_CONNECTED`; the media room joins with the answer ack's fresh token
+  (the ring-time token could expire while an answer was parked).
+- Cold answers are adopted even when no session state exists yet (the
+  ownership pre-check rejected legitimate killed-state answers); shared
+  push router v3 per-call ownership guarantees a voice SDK's calls are
+  never adopted, answered, or ended by this SDK.
+- The native ring is skipped when the call was already answered here; the
+  in-call shell keeps nudging the answer until the room connects, shows
+  Connecting…/timer correctly, and force-closes the native call screen
+  when the call dies.
+- **Packaging: `android/build.gradle` ships again** — 1.1.2 and 1.1.3 were
+  published without it (a build-intermediates filter matched it by
+  prefix), which broke React Native autolinking entirely
+  (`No package name found`). Those two versions are deprecated; upgrade
+  straight to 1.2.0.
+
 ## [1.1.0] - 2026-08-12
 
 ### Added — one SDK call screen for every answered incoming call (Android)
